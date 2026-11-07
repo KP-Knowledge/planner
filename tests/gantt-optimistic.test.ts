@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTaskUpdate, previewDrag, removeTask } from "@/features/gantt/optimistic";
+import { applyOrder, applyPatch, applyTaskUpdate, previewDrag, removeTask } from "@/features/gantt/optimistic";
 import { cascade, moveTask } from "@/lib/schedule";
 import type { Dependency } from "@/server/dependencies";
 import type { GanttData } from "@/server/projects";
@@ -174,5 +174,52 @@ describe("previewDrag", () => {
     const out2 = previewDrag(d, "pred", "resize-end", "2026-04-10", h);
     const succ2 = out2.find((t) => t.id === "succ")!;
     expect(succ2.startDate).toBe("2026-04-16");
+  });
+});
+
+describe("applyOrder", () => {
+  it("reorders sections, moves tasks across sections and carries subtasks along", () => {
+    const d = {
+      ...data([
+        task("a", "2026-04-01", "2026-04-01", { sectionId: "s1", sortOrder: 0 }),
+        task("a1", "2026-04-01", "2026-04-01", { sectionId: "s1", parentId: "a", sortOrder: 0 }),
+        task("b", "2026-04-01", "2026-04-01", { sectionId: "s1", sortOrder: 1 }),
+      ]),
+      sections: [
+        { id: "s1", sortOrder: 0 },
+        { id: "s2", sortOrder: 1 },
+      ],
+    } as unknown as GanttData;
+    const next = applyOrder(d, [
+      { id: "s2", taskIds: ["b", "a"] },
+      { id: "s1", taskIds: [] },
+    ]);
+    expect(next.sections.map((s) => [s.id, s.sortOrder])).toEqual([
+      ["s1", 1],
+      ["s2", 0],
+    ]);
+    const by = Object.fromEntries(next.tasks.map((t) => [t.id, t]));
+    expect([by.b.sectionId, by.b.sortOrder]).toEqual(["s2", 0]);
+    expect([by.a.sectionId, by.a.sortOrder]).toEqual(["s2", 1]);
+    expect(by.a1.sectionId).toBe("s2");
+  });
+});
+
+describe("applyPatch", () => {
+  it("applies fields and cascades when dates change", () => {
+    const d = data(
+      [task("a", "2026-04-01", "2026-04-02"), task("b", "2026-04-03", "2026-04-03")],
+      [dep("a", "b")],
+    );
+    const next = applyPatch(d, "a", { endDate: "2026-04-03", name: "A2" });
+    expect(next.tasks[0]).toMatchObject({ name: "A2", endDate: "2026-04-03" });
+    expect(next.tasks[1].startDate).toBe("2026-04-06");
+  });
+
+  it("does not cascade for non-date edits and forces milestone end = start", () => {
+    const d = data([task("a", "2026-04-01", "2026-04-03")]);
+    expect(applyPatch(d, "a", { progress: 40 }).tasks[0].progress).toBe(40);
+    expect(applyPatch(d, "a", { isMilestone: true }).tasks[0].endDate).toBe("2026-04-01");
+    expect(applyPatch(d, "zzz", { progress: 1 })).toBe(d);
   });
 });

@@ -61,3 +61,51 @@ export function previewDrag(
     .map((m) => ({ ...byId.get(m.id)!, startDate: m.startDate, endDate: m.endDate }));
   return [edited, ...pushed];
 }
+
+export type OrderPayload = { id: string; taskIds: string[] }[];
+
+/** Applies a PUT /order payload locally: section order, task order, and section moves (subtasks follow their parent). */
+export function applyOrder(data: GanttData, order: OrderPayload): GanttData {
+  const sectionIndex = new Map(order.map((s, i) => [s.id, i]));
+  const placement = new Map<string, { sectionId: string; sortOrder: number }>();
+  for (const s of order) s.taskIds.forEach((id, j) => placement.set(id, { sectionId: s.id, sortOrder: j }));
+  return {
+    ...data,
+    sections: data.sections.map((s) => {
+      const i = sectionIndex.get(s.id);
+      return i === undefined ? s : { ...s, sortOrder: i };
+    }),
+    tasks: data.tasks.map((t) => {
+      const own = placement.get(t.id);
+      if (own) return { ...t, ...own };
+      const parent = t.parentId ? placement.get(t.parentId) : undefined;
+      return parent ? { ...t, sectionId: parent.sectionId } : t;
+    }),
+  };
+}
+
+export type TaskPatchInput = Partial<
+  Pick<
+    Task,
+    "name" | "description" | "startDate" | "endDate" | "progress" | "isMilestone" | "teamId" | "color" | "assigneeIds"
+  >
+>;
+
+/** Mirrors the server's PATCH: applies fields as given, milestone forces end = start, then cascades. */
+export function applyPatch(data: GanttData, taskId: string, patch: TaskPatchInput): GanttData {
+  const task = data.tasks.find((t) => t.id === taskId);
+  if (!task) return data;
+  const merged: Task = { ...task, ...patch };
+  if (merged.isMilestone) merged.endDate = merged.startDate;
+  const h = new Set(data.holidays.map((x) => x.date));
+  const datesChanged = merged.startDate !== task.startDate || merged.endDate !== task.endDate;
+  const updated: Task[] = [merged];
+  if (datesChanged) {
+    const sched = data.tasks.map((t) => (t.id === taskId ? merged : t));
+    const byId = new Map(data.tasks.map((t) => [t.id, t]));
+    for (const m of cascade(sched, data.dependencies, [taskId], h)) {
+      if (m.id !== taskId) updated.push({ ...byId.get(m.id)!, startDate: m.startDate, endDate: m.endDate });
+    }
+  }
+  return applyTaskUpdate(data, updated);
+}

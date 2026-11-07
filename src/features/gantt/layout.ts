@@ -52,11 +52,17 @@ export function taskGeometry(
 
 export type Row =
   | { kind: "section"; section: Section }
-  | { kind: "task"; task: Task; depth: 0 | 1 };
+  | { kind: "task"; task: Task; depth: 0 | 1 }
+  | { kind: "add"; sectionId: string };
 
 const bySort = <T extends { sortOrder: number }>(a: T, b: T) => a.sortOrder - b.sortOrder;
 
-export function visibleRows(data: GanttData, collapsed: ReadonlySet<string>): Row[] {
+/** With `editable`, an "add task" row closes every expanded section. */
+export function visibleRows(
+  data: GanttData,
+  collapsed: ReadonlySet<string>,
+  opts: { editable?: boolean } = {},
+): Row[] {
   const childrenOf = new Map<string, Task[]>();
   const topBySection = new Map<string, Task[]>();
   for (const t of data.tasks) {
@@ -78,6 +84,7 @@ export function visibleRows(data: GanttData, collapsed: ReadonlySet<string>): Ro
         rows.push({ kind: "task", task: child, depth: 1 });
       }
     }
+    if (opts.editable) rows.push({ kind: "add", sectionId: section.id });
   }
   return rows;
 }

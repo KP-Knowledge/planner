@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { ThemeProvider } from "next-themes";
 import { useState, type ReactNode } from "react";
+import { ToastProvider } from "@/components/Toast";
 
 export function Providers({
   locale,
@@ -29,7 +30,7 @@ export function Providers({
         timeZone="Asia/Bangkok"
       >
         <QueryClientProvider client={queryClient}>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </QueryClientProvider>
       </NextIntlClientProvider>
     </ThemeProvider>
