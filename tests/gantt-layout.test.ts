@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { initials } from "@/features/gantt/avatar";
 import {
+  AVATAR_SIZE,
+  AVATAR_STEP,
   MILESTONE_HALF,
   PX_PER_DAY,
   ROW_HEIGHT,
+  avatarStackWidth,
   barGeometry,
   dateToX,
   dependencyPath,
   headerSegments,
   isoWeek,
   nonWorkingDays,
+  splitAvatars,
   taskGeometry,
   timelineRange,
   visibleRows,
@@ -225,5 +230,30 @@ describe("nonWorkingDays", () => {
       { date: "2026-04-05", weekend: true, holidays: [] },
       { date: "2026-04-06", weekend: false, holidays: ["Chakri Memorial Day"] },
     ]);
+  });
+});
+
+describe("avatars", () => {
+  it("splitAvatars shows at most 3 then the remainder", () => {
+    expect(splitAvatars([1, 2, 3])).toEqual({ shown: [1, 2, 3], extra: 0 });
+    expect(splitAvatars([1, 2, 3, 4, 5])).toEqual({ shown: [1, 2, 3], extra: 2 });
+    expect(splitAvatars([])).toEqual({ shown: [], extra: 0 });
+  });
+});
+
+describe("avatar stack and initials", () => {
+  it("avatarStackWidth caps at 3 and adds a +N slot", () => {
+    expect(avatarStackWidth(0)).toBe(0);
+    expect(avatarStackWidth(1)).toBe(AVATAR_SIZE);
+    expect(avatarStackWidth(3)).toBe(2 * AVATAR_STEP + AVATAR_SIZE);
+    expect(avatarStackWidth(9)).toBe(3 * AVATAR_STEP + AVATAR_SIZE);
+  });
+
+  it("initials", () => {
+    expect(initials({ name: "Ada Lovelace", email: null })).toBe("AL");
+    expect(initials({ name: "ada", email: null })).toBe("A");
+    expect(initials({ name: null, email: "bob@example.com" })).toBe("B");
+    expect(initials({ name: "เกด สุข", email: null })).toBe("กส");
+    expect(initials({ name: null, email: null })).toBe("?");
   });
 });

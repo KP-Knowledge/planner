@@ -13,6 +13,10 @@ export const BAR_HEIGHT = 22;
 export const MILESTONE_SIZE = 14;
 // Half of the rotated square's diagonal (14 × √2 / 2 ≈ 9.9), rounded up.
 export const MILESTONE_HALF = 10;
+export const GRID_WIDTH = 640;
+export const AVATAR_SIZE = 18;
+export const AVATAR_STEP = 14;
+export const MAX_AVATARS = 3;
 const ELBOW = 8;
 
 export function dateToX(d: ISODate, origin: ISODate, zoom: Zoom): number {
@@ -78,6 +82,17 @@ export function visibleRows(data: GanttData, collapsed: ReadonlySet<string>): Ro
   return rows;
 }
 
+/** Width in px of the SVG avatar stack: up to MAX_AVATARS circles plus a "+N" circle. */
+export function avatarStackWidth(count: number): number {
+  const slots = Math.min(count, MAX_AVATARS) + (count > MAX_AVATARS ? 1 : 0);
+  return slots === 0 ? 0 : (slots - 1) * AVATAR_STEP + AVATAR_SIZE;
+}
+
+/** Rough label width; good enough to decide between inside and outside placement. */
+export function estimateTextWidth(text: string): number {
+  return Array.from(text).length * 7;
+}
+
 const rowMid = (row: number) => row * ROW_HEIGHT + ROW_HEIGHT / 2;
 
 /**
@@ -99,8 +114,7 @@ export function dependencyPath(
   }
   // Successor starts too early to fit the elbow: run along the row boundary
   // next to the predecessor, then come in from the left of the successor.
-  const boundary = to.row > from.row ? (from.row + 1) * ROW_HEIGHT : from.row * ROW_HEIGHT;
-  const lane = to.row === from.row ? (from.row + 1) * ROW_HEIGHT : boundary;
+  const lane = to.row >= from.row ? (from.row + 1) * ROW_HEIGHT : from.row * ROW_HEIGHT;
   const approach = to.x - ELBOW;
   return `M${sx} ${sy} H${out} V${lane} H${approach} V${ey} H${to.x}`;
 }
@@ -210,4 +224,9 @@ export function holidayNameMap(
     else map.set(h.date, [h.name]);
   }
   return map;
+}
+
+/** First `max` items plus the count that did not fit ("+N"). */
+export function splitAvatars<T>(items: readonly T[], max = MAX_AVATARS): { shown: T[]; extra: number } {
+  return { shown: items.slice(0, max), extra: Math.max(0, items.length - max) };
 }
