@@ -1,0 +1,22 @@
+{
+  "app": {
+    "name": "Planner"
+  },
+  "nav": {
+    "projects": "โปรเจกต์"
+  },
+  "theme": {
+    "label": "ธีม",
+    "light": "สว่าง",
+    "dark": "มืด",
+    "system": "ตามระบบ"
+  },
+  "locale": {
+    "label": "ภาษา",
+    "en": "English",
+    "th": "ไทย"
+  },
+  "projects": {
+    "title": "โปรเจกต์"
+  }
+}
