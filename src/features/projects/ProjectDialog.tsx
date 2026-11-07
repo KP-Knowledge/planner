@@ -67,6 +67,7 @@ export function ProjectDialog({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
+            maxLength={10000}
             className={inputCls}
           />
         </div>

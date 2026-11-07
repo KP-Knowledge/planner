@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useId, useRef, useState, type FormEvent } from "react";
-import { btnGhost, btnPrimary, inputCls } from "@/components/buttons";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { btnGhostDanger, btnPrimary, inputCls } from "@/components/buttons";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Team } from "@/server/teams";
 import { useCreateTeam, useDeleteTeam, useTeams, useUpdateTeam } from "./api";
@@ -14,6 +14,15 @@ function TeamRow({ team, onDelete }: { team: Team; onDelete: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(team.name);
   const cancelled = useRef(false);
+  const refocus = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!editing && refocus.current) {
+      refocus.current = false;
+      trigger.current?.focus();
+    }
+  }, [editing]);
 
   function start() {
     setDraft(team.name);
@@ -45,9 +54,13 @@ function TeamRow({ team, onDelete }: { team: Team; onDelete: () => void }) {
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Enter") {
+                refocus.current = true;
+                e.currentTarget.blur();
+              }
               if (e.key === "Escape") {
                 cancelled.current = true;
+                refocus.current = true;
                 setEditing(false);
               }
             }}
@@ -55,6 +68,7 @@ function TeamRow({ team, onDelete }: { team: Team; onDelete: () => void }) {
           />
         ) : (
           <button
+            ref={trigger}
             type="button"
             onClick={start}
             title={t("rename")}
@@ -74,7 +88,7 @@ function TeamRow({ team, onDelete }: { team: Team; onDelete: () => void }) {
         value={team.color}
         onChange={(color) => update.mutate({ id: team.id, color })}
       />
-      <button type="button" onClick={onDelete} className={`${btnGhost} text-danger hover:text-danger`}>
+      <button type="button" onClick={onDelete} className={btnGhostDanger}>
         {t("delete")}
       </button>
     </li>

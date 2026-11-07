@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
-import { btnGhost } from "@/components/buttons";
+import { btnGhost, btnGhostDanger } from "@/components/buttons";
 import type { Project } from "@/server/projects";
 
 export function ProjectCard({
@@ -49,11 +49,7 @@ export function ProjectCard({
             <button type="button" onClick={onRestore} className={btnGhost}>
               {t("restore")}
             </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className={`${btnGhost} ml-auto text-danger hover:text-danger`}
-            >
+            <button type="button" onClick={onDelete} className={`${btnGhostDanger} ml-auto`}>
               {t("deleteForever")}
             </button>
           </>

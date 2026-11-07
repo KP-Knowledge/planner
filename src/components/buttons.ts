@@ -3,6 +3,7 @@ const base =
 
 export const btnPrimary = `${base} bg-primary text-white hover:opacity-90`;
 export const btnSecondary = `${base} border border-border bg-card text-text hover:bg-surface`;
+export const btnGhostDanger = `${base} text-danger hover:bg-surface`;
 export const btnDanger = `${base} bg-danger text-white hover:opacity-90`;
 export const btnGhost = `${base} text-muted hover:bg-surface hover:text-text`;
 export const inputCls =
