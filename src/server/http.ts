@@ -1,16 +1,8 @@
 import { ZodError } from "zod";
 import { auth } from "@/auth";
+import { ApiError } from "./errors";
 
-export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message?: string,
-  ) {
-    super(message ?? code);
-    this.name = "ApiError";
-  }
-}
+export { ApiError };
 
 export type AuthUser = { id: string };
 
@@ -46,4 +38,13 @@ export function withAuth<Ctx = { params: Promise<Record<string, string>> }>(
       return Response.json({ error: "internal" }, { status: 500 });
     }
   };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// A malformed id can never exist, and Postgres would reject it with a 500.
+export async function routeId(ctx: { params: Promise<{ id: string }> }): Promise<string> {
+  const { id } = await ctx.params;
+  if (!UUID_RE.test(id)) throw new ApiError(404, "not_found");
+  return id;
 }
