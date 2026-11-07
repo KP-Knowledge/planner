@@ -18,5 +18,10 @@
   },
   "projects": {
     "title": "Projects"
+  },
+  "auth": {
+    "subtitle": "Sign in to continue",
+    "signInWithKeycloak": "Sign in with Keycloak",
+    "signOut": "Sign out"
   }
 }

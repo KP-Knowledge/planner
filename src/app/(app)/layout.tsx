@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { LocaleSwitch } from "@/components/LocaleSwitch";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserMenu } from "@/components/UserMenu";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const t = await getTranslations();
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <ThemeToggle />
         <LocaleSwitch />
+        <UserMenu />
       </header>
       <main className="flex-1 p-6">{children}</main>
     </div>

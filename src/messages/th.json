@@ -18,5 +18,10 @@
   },
   "projects": {
     "title": "โปรเจกต์"
+  },
+  "auth": {
+    "subtitle": "เข้าสู่ระบบเพื่อใช้งานต่อ",
+    "signInWithKeycloak": "เข้าสู่ระบบด้วย Keycloak",
+    "signOut": "ออกจากระบบ"
   }
 }
