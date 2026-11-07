@@ -15,6 +15,9 @@ import * as deps from "@/app/api/dependencies/route";
 import * as dep from "@/app/api/dependencies/[id]/route";
 import * as teams from "@/app/api/teams/route";
 import * as team from "@/app/api/teams/[id]/route";
+import * as holidays from "@/app/api/holidays/route";
+import * as holiday from "@/app/api/holidays/[id]/route";
+import * as holidayImport from "@/app/api/holidays/import/route";
 import * as users from "@/app/api/users/route";
 
 type Handler = (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
@@ -38,6 +41,11 @@ const cases: [string, string, Handler][] = [
   ["POST", "/api/teams", teams.POST],
   ["PATCH", "/api/teams/x", team.PATCH],
   ["DELETE", "/api/teams/x", team.DELETE],
+  ["GET", "/api/holidays?year=2026", holidays.GET],
+  ["POST", "/api/holidays", holidays.POST],
+  ["PATCH", "/api/holidays/x", holiday.PATCH],
+  ["DELETE", "/api/holidays/x", holiday.DELETE],
+  ["POST", "/api/holidays/import", holidayImport.POST],
   ["GET", "/api/users", users.GET],
 ];
 

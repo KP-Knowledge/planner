@@ -66,6 +66,22 @@ export const teamPatch = z.object({
   color: hexColor.optional(),
 });
 
+const holidayYear = z.number().int().min(2000).max(2100);
+export const holidayListQuery = z.object({
+  year: z.coerce.number().pipe(holidayYear),
+  projectId: uuid.optional(),
+});
+export const holidayCreate = z.object({
+  date: isoDate,
+  name,
+  projectId: uuid.optional(),
+});
+export const holidayPatch = z.object({
+  date: isoDate.optional(),
+  name: name.optional(),
+});
+export const holidayImport = z.object({ year: holidayYear });
+
 export const orderBody = z.object({
   sections: z
     .array(z.object({ id: uuid, taskIds: z.array(uuid) }))
@@ -81,4 +97,7 @@ export type TaskPatch = z.infer<typeof taskPatch>;
 export type DependencyCreate = z.infer<typeof dependencyCreate>;
 export type TeamCreate = z.infer<typeof teamCreate>;
 export type TeamPatch = z.infer<typeof teamPatch>;
+export type HolidayListQuery = z.infer<typeof holidayListQuery>;
+export type HolidayCreate = z.infer<typeof holidayCreate>;
+export type HolidayPatch = z.infer<typeof holidayPatch>;
 export type OrderBody = z.infer<typeof orderBody>;
