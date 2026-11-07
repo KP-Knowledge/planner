@@ -26,10 +26,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/signin" },
-  trustHost: true,
   callbacks: {
     async jwt({ token, account, profile }) {
-      if (account && profile?.sub) {
+      if (account) {
+        if (!profile?.sub) throw new Error("Keycloak profile is missing sub");
         const user = await upsertUserFromProfile(getDb(), {
           sub: profile.sub,
           name: profile.name ?? undefined,

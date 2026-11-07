@@ -31,6 +31,9 @@ export function withAuth<Ctx = { params: Promise<Record<string, string>> }>(
           { status: 400 },
         );
       }
+      if (err instanceof SyntaxError) {
+        return Response.json({ error: "invalid_json" }, { status: 400 });
+      }
       if (err instanceof ApiError) {
         return Response.json(
           err.message === err.code

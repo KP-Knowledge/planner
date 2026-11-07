@@ -54,6 +54,23 @@ describe("withAuth", () => {
     expect(await res.json()).toEqual({ error: "cycle", message: "would create a cycle" });
   });
 
+  it("ApiError without message -> only { error: code }", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" } });
+    const res = await withAuth(async () => {
+      throw new ApiError(404, "not_found");
+    })(req, ctx);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "not_found" });
+  });
+
+  it("malformed JSON body -> 400 invalid_json", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" } });
+    const bad = new Request("http://localhost/api/x", { method: "POST", body: "{nope" });
+    const res = await withAuth(async (r) => Response.json(await r.json()))(bad, ctx);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_json" });
+  });
+
   it("unknown error -> 500 internal without details", async () => {
     authMock.mockResolvedValue({ user: { id: "u1" } });
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
