@@ -230,3 +230,17 @@ export function holidayNameMap(
 export function splitAvatars<T>(items: readonly T[], max = MAX_AVATARS): { shown: T[]; extra: number } {
   return { shown: items.slice(0, max), extra: Math.max(0, items.length - max) };
 }
+
+/**
+ * Number of tasks under each collapsible row: tasks in a section (subtasks
+ * included) and subtasks of a task. Ids with no children are absent.
+ */
+export function childCounts(data: Pick<GanttData, "tasks">): Map<string, number> {
+  const counts = new Map<string, number>();
+  const bump = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
+  for (const t of data.tasks) {
+    bump(t.sectionId);
+    if (t.parentId) bump(t.parentId);
+  }
+  return counts;
+}

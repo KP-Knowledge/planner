@@ -8,6 +8,7 @@ import {
   ROW_HEIGHT,
   avatarStackWidth,
   barGeometry,
+  childCounts,
   dateToX,
   dependencyPath,
   headerSegments,
@@ -255,5 +256,17 @@ describe("avatar stack and initials", () => {
     expect(initials({ name: null, email: "bob@example.com" })).toBe("B");
     expect(initials({ name: "เกด สุข", email: null })).toBe("กส");
     expect(initials({ name: null, email: null })).toBe("?");
+  });
+});
+
+describe("childCounts", () => {
+  it("counts section tasks (subtasks included) and subtasks per parent", () => {
+    const counts = childCounts(
+      data([], [task("a1", "a", 0), task("a1-1", "a", 0, { parentId: "a1" }), task("b1", "b", 0)]),
+    );
+    expect(counts.get("a")).toBe(2);
+    expect(counts.get("b")).toBe(1);
+    expect(counts.get("a1")).toBe(1);
+    expect(counts.has("b1")).toBe(false);
   });
 });

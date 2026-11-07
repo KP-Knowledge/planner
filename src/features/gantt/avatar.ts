@@ -30,6 +30,17 @@ export function initials(user: { name: string | null; email: string | null }): s
   return local ? firstChar(local) : "?";
 }
 
-export function displayName(user: { name: string | null; email: string | null }): string {
-  return user.name ?? user.email ?? "?";
+export type AvatarUser = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+};
+
+/** Assignee ids to users. An id with no matching user stays visible as a "?" avatar. */
+export function resolveAssignees(
+  ids: readonly string[],
+  usersById: ReadonlyMap<string, AvatarUser>,
+): AvatarUser[] {
+  return ids.map((id) => usersById.get(id) ?? { id, name: null, email: null, image: null });
 }
