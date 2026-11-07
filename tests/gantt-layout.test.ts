@@ -53,7 +53,9 @@ function data(sections: Section[], tasks: Task[]): GanttData {
 }
 
 const ids = (rows: ReturnType<typeof visibleRows>) =>
-  rows.map((r) => (r.kind === "section" ? `S:${r.section.id}` : `${r.depth}:${r.task.id}`));
+  rows.map((r) =>
+    r.kind === "section" ? `S:${r.section.id}` : r.kind === "add" ? `A:${r.sectionId}` : `${r.depth}:${r.task.id}`,
+  );
 
 describe("geometry", () => {
   it("dateToX / xToDate", () => {
@@ -93,6 +95,12 @@ describe("visibleRows", () => {
     task("a1-1", "a", 0, { parentId: "a1" }),
     task("b1", "b", 0),
   ];
+
+  it("editable adds an add-row at the end of each expanded section", () => {
+    const rows = visibleRows(data(sections, tasks), new Set(["b"]), { editable: true });
+    expect(ids(rows).filter((r) => r.startsWith("A:"))).toEqual(["A:a"]);
+    expect(ids(rows).at(-1)).toBe("S:b");
+  });
 
   it("orders by section then task sortOrder with subtasks after parent", () => {
     expect(ids(visibleRows(data(sections, tasks), new Set()))).toEqual([

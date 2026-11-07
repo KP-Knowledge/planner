@@ -143,6 +143,7 @@ function GridPaneImpl({
           );
         }
 
+        if (row.kind === "add") return null;
         const { task, depth } = row;
         const subtasks = depth === 0 ? (counts.get(task.id) ?? 0) : 0;
         const open = !collapsed.has(task.id);
