@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { LOCALE_COOKIE, locales } from "@/i18n/locales";
+import { isLocale, LOCALE_COOKIE } from "@/i18n/locales";
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const locale = locales.find((l) => l === body?.locale);
-  if (!locale) {
+  const locale = body?.locale;
+  if (!isLocale(locale)) {
     return NextResponse.json({ error: "Invalid locale" }, { status: 400 });
   }
 
