@@ -143,6 +143,20 @@ describe("cascade", () => {
     expect(cascade(tasks, deps, ["a", "b"], H)).toEqual([t("c", "2026-04-10", "2026-04-10")]);
   });
 
+  it("pushes the successor to the next workday when the predecessor ends on a holiday", () => {
+    const tasks = [t("a", "2026-04-13", "2026-04-14"), t("b", "2026-04-14", "2026-04-14")];
+    expect(cascade(tasks, [{ predecessorId: "a", successorId: "b" }], ["a"], TH)).toEqual([
+      t("b", "2026-04-16", "2026-04-16"),
+    ]);
+  });
+
+  it("cascades across a month boundary", () => {
+    const tasks = [t("a", "2026-04-28", "2026-04-30"), t("b", "2026-04-29", "2026-04-30")];
+    expect(cascade(tasks, [{ predecessorId: "a", successorId: "b" }], ["a"], TH)).toEqual([
+      t("b", "2026-05-01", "2026-05-04"),
+    ]);
+  });
+
   it("terminates on a cycle", () => {
     const tasks = [t("a", "2026-04-07", "2026-04-08"), t("b", "2026-04-07", "2026-04-08")];
     const deps: Dep[] = [

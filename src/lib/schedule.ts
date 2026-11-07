@@ -29,6 +29,7 @@ export function resizeTask(t: SchedTask, newEnd: ISODate, h: HolidaySet): SchedT
 
 export function resizeTaskStart(t: SchedTask, newStart: ISODate, h: HolidaySet): SchedTask {
   const snapped = snapToWorkday(newStart, h);
+  // After clamping to endDate the start may be a non-workday; that is left as is.
   return { ...t, startDate: snapped > t.endDate ? t.endDate : snapped };
 }
 
@@ -58,7 +59,7 @@ export function cascade(
       for (const pid of preds.get(sid) ?? []) {
         const pred = current.get(pid);
         if (!pred || succ.startDate > pred.endDate) continue;
-        const next = addWorkdays(pred.endDate, 1, h);
+        const next = snapToWorkday(addDays(pred.endDate, 1), h);
         if (required === null || next > required) required = next;
       }
       if (required === null) continue;
