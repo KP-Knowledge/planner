@@ -1,4 +1,4 @@
-import type { User } from "@/server/users";
+import type { AvatarUser } from "./avatar";
 import { SvgAvatars } from "./Avatars";
 import { AVATAR_SIZE, ROW_HEIGHT, avatarStackWidth } from "./layout";
 
@@ -11,7 +11,7 @@ export function BarTail({
 }: {
   x: number;
   row: number;
-  assignees: readonly User[];
+  assignees: readonly AvatarUser[];
   label?: string;
 }) {
   const mid = row * ROW_HEIGHT + ROW_HEIGHT / 2;

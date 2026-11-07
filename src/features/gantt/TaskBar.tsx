@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from "react";
 import type { Task } from "@/server/tasks";
-import type { User } from "@/server/users";
+import type { AvatarUser } from "./avatar";
 import { BarTail } from "./BarTail";
 import { BAR_HEIGHT, ROW_HEIGHT, estimateTextWidth } from "./layout";
 
@@ -10,7 +10,7 @@ export type BarProps = {
   x: number;
   width: number;
   color: string;
-  assignees: readonly User[];
+  assignees: readonly AvatarUser[];
   ariaLabel: string;
   onSelect?: (taskId: string) => void;
 };

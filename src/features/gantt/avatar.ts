@@ -30,6 +30,10 @@ export function initials(user: { name: string | null; email: string | null }): s
   return local ? firstChar(local) : "?";
 }
 
+export function displayName(user: { name: string | null; email: string | null }): string {
+  return user.name ?? user.email ?? "";
+}
+
 export type AvatarUser = {
   id: string;
   name: string | null;

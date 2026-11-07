@@ -5,7 +5,7 @@ import { memo } from "react";
 import { countWorkdays, type HolidaySet } from "@/lib/workdays";
 import { resolveAssignees, type AvatarUser } from "./avatar";
 import { HtmlAvatars } from "./Avatars";
-import { MEDIUM_DATE, useDateFormat, useTaskLabel } from "./format";
+import { useTaskFormat } from "./format";
 import { GRID_WIDTH, HEADER_HEIGHT, ROW_HEIGHT, type Row } from "./layout";
 
 /** Column widths in px; must add up to GRID_WIDTH. */
@@ -83,8 +83,7 @@ function GridPaneImpl({
   onSelect,
 }: GridPaneProps) {
   const t = useTranslations("gantt");
-  const fmt = useDateFormat(MEDIUM_DATE);
-  const taskLabel = useTaskLabel();
+  const { date: fmt, taskLabel } = useTaskFormat();
 
   const header = (label: string, width: number, align = "") => (
     <div
