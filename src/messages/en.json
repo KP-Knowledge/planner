@@ -3,7 +3,9 @@
     "name": "Planner"
   },
   "nav": {
-    "projects": "Projects"
+    "projects": "Projects",
+    "label": "Main",
+    "teams": "Teams"
   },
   "theme": {
     "label": "Theme",
@@ -17,11 +19,50 @@
     "th": "ไทย"
   },
   "projects": {
-    "title": "Projects"
+    "title": "Projects",
+    "new": "New project",
+    "newTitle": "New project",
+    "renameTitle": "Rename project",
+    "name": "Name",
+    "description": "Description",
+    "showArchived": "Show archived",
+    "updated": "Updated {date}",
+    "rename": "Rename",
+    "archive": "Archive",
+    "restore": "Restore",
+    "deleteForever": "Delete forever",
+    "archiveTitle": "Archive project",
+    "archiveBody": "\"{name}\" will move to the archive. You can restore it later.",
+    "deleteTitle": "Delete project forever",
+    "deleteBody": "\"{name}\" and all its tasks will be deleted permanently. This cannot be undone.",
+    "empty": "No projects yet. Create your first one.",
+    "emptyArchived": "No archived projects."
   },
   "auth": {
     "subtitle": "Sign in to continue",
     "signInWithKeycloak": "Sign in with Keycloak",
     "signOut": "Sign out"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "error": "Something went wrong. Please try again.",
+    "typeToConfirm": "Type \"{text}\" to confirm"
+  },
+  "teams": {
+    "title": "Teams",
+    "newName": "New team name",
+    "name": "Team name",
+    "add": "Add team",
+    "color": "Team color",
+    "rename": "Click to rename",
+    "delete": "Delete",
+    "deleteTitle": "Delete team",
+    "deleteBody": "Delete \"{name}\"? Tasks in this team will fall back to the default color.",
+    "empty": "No teams yet. Add one to color-code your tasks.",
+    "saveError": "Could not save. Please try again."
   }
 }
