@@ -135,6 +135,7 @@
     "filterUsers": "Filter people",
     "noUsers": "No people found",
     "invalidRange": "End date can't be before the start date.",
+    "invalidYear": "Year must be between 2000 and 2100.",
     "deleteTask": "Delete task"
   }
 }

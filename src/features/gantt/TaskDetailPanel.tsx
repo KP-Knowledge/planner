@@ -9,6 +9,7 @@ import type { Task } from "@/server/tasks";
 import { ColorPicker } from "../teams/ColorPicker";
 import { useDeleteTask, useUpdateTask } from "./api";
 import { AssigneePicker } from "./AssigneePicker";
+import { DATE_MAX, DATE_MIN, resolveDraft } from "./dateInput";
 import type { TaskPatchInput } from "./optimistic";
 
 const LABEL = "mb-1 block text-xs font-medium text-muted";
@@ -117,20 +118,34 @@ function TaskForm({
 
   const start = dates?.start ?? task.startDate;
   const end = dates?.end ?? task.endDate;
-  const rangeInvalid = !task.isMilestone && start !== "" && end !== "" && end < start;
+  const draft = resolveDraft({ start, end }, task.isMilestone);
+  const yearInvalid = !draft.ok && draft.reason === "year";
+  const rangeInvalid = !draft.ok && draft.reason === "range";
 
+  // Typing only updates the local draft. Chrome fires `change` per keystroke once the segments are filled,
+  // so saving here would persist partial years like 0202.
   const changeDate = (field: "start" | "end", value: string) => {
-    const next = { start, end, [field]: value };
-    if (task.isMilestone) next.end = next.start;
-    if (next.start === "" || next.end === "" || next.end < next.start) {
-      setDates(next);
+    setDates({ start, end, [field]: value });
+  };
+
+  const commitDates = () => {
+    if (!dates) return;
+    const result = resolveDraft(dates, task.isMilestone);
+    if (!result.ok) {
+      if (result.reason === "incomplete") setDates(null);
       return;
     }
     setDates(null);
     const patch: TaskPatchInput = {};
-    if (next.start !== task.startDate) patch.startDate = next.start;
-    if (next.end !== task.endDate) patch.endDate = next.end;
+    if (result.start !== task.startDate) patch.startDate = result.start;
+    if (result.end !== task.endDate) patch.endDate = result.end;
     if (Object.keys(patch).length > 0) save(patch);
+  };
+
+  const dateKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    commitDates();
   };
 
   const commitName = () => {
@@ -208,8 +223,12 @@ function TaskForm({
               id={ids.start}
               type="date"
               value={start}
+              min={DATE_MIN}
+              max={DATE_MAX}
               onChange={(e) => changeDate("start", e.target.value)}
-              aria-invalid={rangeInvalid}
+              onBlur={commitDates}
+              onKeyDown={dateKeyDown}
+              aria-invalid={rangeInvalid || yearInvalid}
               className={inputCls}
             />
           </div>
@@ -222,17 +241,21 @@ function TaskForm({
                 id={ids.end}
                 type="date"
                 value={end}
+                min={DATE_MIN}
+                max={DATE_MAX}
                 onChange={(e) => changeDate("end", e.target.value)}
-                aria-invalid={rangeInvalid}
-                aria-describedby={rangeInvalid ? `${ids.end}-err` : undefined}
+                onBlur={commitDates}
+                onKeyDown={dateKeyDown}
+                aria-invalid={rangeInvalid || yearInvalid}
+                aria-describedby={rangeInvalid || yearInvalid ? `${ids.end}-err` : undefined}
                 className={inputCls}
               />
             </div>
           )}
         </div>
-        {rangeInvalid && (
+        {(rangeInvalid || yearInvalid) && (
           <p id={`${ids.end}-err`} role="alert" className="-mt-2 text-sm text-danger">
-            {t("invalidRange")}
+            {yearInvalid ? t("invalidYear") : t("invalidRange")}
           </p>
         )}
 
