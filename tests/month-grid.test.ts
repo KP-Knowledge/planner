@@ -2,25 +2,39 @@ import { describe, expect, it } from "vitest";
 import { monthGrid } from "@/features/holidays/monthLayout";
 
 describe("monthGrid", () => {
-  it("pads a month that starts on Sunday with six leading nulls (Monday first)", () => {
+  it("has no leading blanks when the month starts on Sunday (Sunday first)", () => {
     const weeks = monthGrid(2026, 11);
-    expect(weeks).toHaveLength(6);
-    expect(weeks[0]).toEqual([null, null, null, null, null, null, "2026-11-01"]);
-    expect(weeks[5]).toEqual(["2026-11-30", null, null, null, null, null, null]);
+    expect(weeks).toHaveLength(5);
+    expect(weeks[0]).toEqual(["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07"]);
+    expect(weeks[4]).toEqual(["2026-11-29", "2026-11-30", null, null, null, null, null]);
   });
 
-  it("has no padding when a 28-day month starts on Monday", () => {
-    const weeks = monthGrid(2027, 2);
+  it("pads a month that starts on Saturday with six leading nulls", () => {
+    const weeks = monthGrid(2026, 8);
+    expect(weeks).toHaveLength(6);
+    expect(weeks[0]).toEqual([null, null, null, null, null, null, "2026-08-01"]);
+    expect(weeks[5]).toEqual(["2026-08-30", "2026-08-31", null, null, null, null, null]);
+  });
+
+  it("has no padding when a 28-day month starts on Sunday", () => {
+    const weeks = monthGrid(2026, 2);
     expect(weeks).toHaveLength(4);
-    expect(weeks[0][0]).toBe("2027-02-01");
-    expect(weeks[3][6]).toBe("2027-02-28");
+    expect(weeks[0][0]).toBe("2026-02-01");
+    expect(weeks[3][6]).toBe("2026-02-28");
     expect(weeks.flat().every((d) => d !== null)).toBe(true);
+  });
+
+  it("puts a Monday start in the second column", () => {
+    const weeks = monthGrid(2027, 2);
+    expect(weeks).toHaveLength(5);
+    expect(weeks[0]).toEqual([null, "2027-02-01", "2027-02-02", "2027-02-03", "2027-02-04", "2027-02-05", "2027-02-06"]);
+    expect(weeks[4]).toEqual(["2027-02-28", null, null, null, null, null, null]);
   });
 
   it("handles leap-year February", () => {
     const weeks = monthGrid(2028, 2);
     expect(weeks).toHaveLength(5);
-    expect(weeks[0]).toEqual([null, "2028-02-01", "2028-02-02", "2028-02-03", "2028-02-04", "2028-02-05", "2028-02-06"]);
+    expect(weeks[0]).toEqual([null, null, "2028-02-01", "2028-02-02", "2028-02-03", "2028-02-04", "2028-02-05"]);
     expect(weeks.flat().filter(Boolean)).toHaveLength(29);
   });
 

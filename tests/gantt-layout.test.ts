@@ -12,12 +12,12 @@ import {
   dateToX,
   dependencyPath,
   headerSegments,
-  isoWeek,
   nonWorkingDays,
   splitAvatars,
   taskGeometry,
   timelineRange,
   visibleRows,
+  weekStart,
   xToDate,
 } from "@/features/gantt/layout";
 import type { GanttData } from "@/server/projects";
@@ -180,14 +180,12 @@ describe("timelineRange", () => {
   });
 });
 
-describe("isoWeek", () => {
-  it("matches ISO 8601", () => {
-    expect(isoWeek("2026-01-01")).toBe(1);
-    expect(isoWeek("2026-04-06")).toBe(15);
-    expect(isoWeek("2026-12-31")).toBe(53);
-    expect(isoWeek("2027-01-01")).toBe(53);
-    expect(isoWeek("2027-01-04")).toBe(1);
-    expect(isoWeek("2024-12-30")).toBe(1);
+describe("weekStart", () => {
+  it("returns the Sunday on or before the date", () => {
+    expect(weekStart("2026-11-08")).toBe("2026-11-08");
+    expect(weekStart("2026-11-09")).toBe("2026-11-08");
+    expect(weekStart("2026-11-14")).toBe("2026-11-08");
+    expect(weekStart("2027-01-01")).toBe("2026-12-27");
   });
 });
 
@@ -204,14 +202,22 @@ describe("headerSegments", () => {
     expect(sum(bottom)).toBe(4 * 36);
   });
 
-  it("week zoom: clips first and last week, weeks start on Monday", () => {
+  it("week zoom: clips first and last week, weeks start on Sunday", () => {
     const { bottom } = headerSegments("2026-04-01", "2026-04-14", "week");
     expect(bottom.map((c) => [c.date, c.days])).toEqual([
-      ["2026-04-01", 5],
-      ["2026-04-06", 7],
-      ["2026-04-13", 2],
+      ["2026-04-01", 4],
+      ["2026-04-05", 7],
+      ["2026-04-12", 3],
     ]);
-    expect(bottom.map((c) => c.x)).toEqual([0, 5 * 16, 12 * 16]);
+    expect(bottom.map((c) => c.x)).toEqual([0, 4 * 16, 11 * 16]);
+  });
+
+  it("week zoom: a range starting on Sunday has no clipped first week", () => {
+    const { bottom } = headerSegments("2026-11-08", "2026-11-21", "week");
+    expect(bottom.map((c) => [c.date, c.days])).toEqual([
+      ["2026-11-08", 7],
+      ["2026-11-15", 7],
+    ]);
   });
 
   it("month zoom: years on top, months on the bottom", () => {

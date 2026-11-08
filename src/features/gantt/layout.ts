@@ -180,11 +180,12 @@ function segments(
   return out;
 }
 
-const monday = (d: ISODate) => addDays(d, -((dayOfWeek(d) + 6) % 7));
+/** The Sunday on or before `d`. */
+export const weekStart = (d: ISODate): ISODate => addDays(d, -dayOfWeek(d));
 
 /**
  * Two header rows covering origin..end (inclusive).
- * day: month / day, week: month / ISO week, month: year / month.
+ * day: month / day, week: month / week (Sunday start), month: year / month.
  */
 export function headerSegments(
   origin: ISODate,
@@ -198,7 +199,7 @@ export function headerSegments(
     case "day":
       return { top: segments(origin, end, px, month), bottom: segments(origin, end, px, (d) => d) };
     case "week":
-      return { top: segments(origin, end, px, month), bottom: segments(origin, end, px, monday) };
+      return { top: segments(origin, end, px, month), bottom: segments(origin, end, px, weekStart) };
     case "month":
       return { top: segments(origin, end, px, year), bottom: segments(origin, end, px, month) };
   }
