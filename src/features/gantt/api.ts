@@ -6,16 +6,10 @@ import type { Dependency } from "@/server/dependencies";
 import type { GanttData } from "@/server/projects";
 import type { Section } from "@/server/sections";
 import type { Task } from "@/server/tasks";
-import {
-  applyOrder,
-  applyPatch,
-  applyTaskUpdate,
-  removeTask,
-  type OrderPayload,
-  type TaskPatchInput,
-} from "./optimistic";
+import { createGanttCache, ganttKey, updateTaskOptions } from "./cache";
+import { applyOrder, applyTaskUpdate, removeTask, type OrderPayload } from "./optimistic";
 
-export const ganttKey = (projectId: string) => ["gantt", projectId] as const;
+export { ganttKey };
 
 export function useGantt(projectId: string) {
   return useQuery({
@@ -25,47 +19,20 @@ export function useGantt(projectId: string) {
   });
 }
 
-/** Shared optimistic plumbing: snapshot, apply `optimistic` to the cache, roll back and toast on error. */
 function useGanttCache(projectId: string) {
   const qc = useQueryClient();
   const toast = useToast();
   const t = useTranslations("gantt");
-  const key = ganttKey(projectId);
-
-  const update = (fn: (d: GanttData) => GanttData) =>
-    qc.setQueryData<GanttData>(key, (d) => (d ? fn(d) : d));
-
-  return {
-    update,
-    async begin(optimistic?: (d: GanttData) => GanttData) {
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<GanttData>(key);
-      if (optimistic) update(optimistic);
-      return { prev };
-    },
-    rollback(ctx: { prev?: GanttData } | undefined) {
-      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
-    },
-    fail(err: unknown, fallbackKey: "saveFailed" | "createFailed" | "deleteFailed" | "orderFailed") {
-      if (err instanceof HttpError && err.code === "cycle") toast(t("cycleError"), "error");
-      else if (err instanceof HttpError && err.code === "duplicate") toast(t("duplicateError"), "error");
-      else toast(t(fallbackKey), "error");
-    },
-  };
+  return createGanttCache(qc, projectId, (err, fallbackKey) => {
+    if (err instanceof HttpError && err.code === "cycle") toast(t("cycleError"), "error");
+    else if (err instanceof HttpError && err.code === "duplicate") toast(t("duplicateError"), "error");
+    else toast(t(fallbackKey), "error");
+  });
 }
 
 export function useUpdateTask(projectId: string) {
   const c = useGanttCache(projectId);
-  return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: TaskPatchInput }) =>
-      apiFetch<{ tasks: Task[] }>(`/api/tasks/${id}`, { method: "PATCH", json: patch }),
-    onMutate: ({ id, patch }) => c.begin((d) => applyPatch(d, id, patch)),
-    onError: (err, _v, ctx) => {
-      c.rollback(ctx);
-      c.fail(err, "saveFailed");
-    },
-    onSuccess: ({ tasks }) => c.update((d) => applyTaskUpdate(d, tasks)),
-  });
+  return useMutation(updateTaskOptions(c));
 }
 
 export type CreateTaskInput = {
@@ -80,6 +47,7 @@ export type CreateTaskInput = {
 export function useCreateTask(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (input: CreateTaskInput) =>
       apiFetch<Task>("/api/tasks", { method: "POST", json: input }),
     onError: (err) => c.fail(err, "createFailed"),
@@ -90,6 +58,7 @@ export function useCreateTask(projectId: string) {
 export function useDeleteTask(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (id: string) => apiFetch<void>(`/api/tasks/${id}`, { method: "DELETE" }),
     onMutate: (id) => c.begin((d) => removeTask(d, id)),
     onError: (err, _id, ctx) => {
@@ -102,6 +71,7 @@ export function useDeleteTask(projectId: string) {
 export function useCreateDependency(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (input: { predecessorId: string; successorId: string }) =>
       apiFetch<{ dependency: Dependency; tasks: Task[] }>("/api/dependencies", {
         method: "POST",
@@ -121,6 +91,7 @@ export function useCreateDependency(projectId: string) {
 export function useDeleteDependency(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (id: string) => apiFetch<void>(`/api/dependencies/${id}`, { method: "DELETE" }),
     onMutate: (id) =>
       c.begin((d) => ({ ...d, dependencies: d.dependencies.filter((x) => x.id !== id) })),
@@ -134,6 +105,7 @@ export function useDeleteDependency(projectId: string) {
 export function useReorder(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (sections: OrderPayload) =>
       apiFetch<void>(`/api/projects/${projectId}/order`, { method: "PUT", json: { sections } }),
     onMutate: (sections) => c.begin((d) => applyOrder(d, sections)),
@@ -147,6 +119,7 @@ export function useReorder(projectId: string) {
 export function useCreateSection(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (name: string) =>
       apiFetch<Section>("/api/sections", { method: "POST", json: { projectId, name } }),
     onError: (err) => c.fail(err, "createFailed"),
@@ -157,6 +130,7 @@ export function useCreateSection(projectId: string) {
 export function useRenameSection(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: ({ id, name }: { id: string; name: string }) =>
       apiFetch<Section>(`/api/sections/${id}`, { method: "PATCH", json: { name } }),
     onMutate: ({ id, name }) =>
@@ -171,6 +145,7 @@ export function useRenameSection(projectId: string) {
 export function useDeleteSection(projectId: string) {
   const c = useGanttCache(projectId);
   return useMutation({
+    ...c.shared,
     mutationFn: (id: string) => apiFetch<void>(`/api/sections/${id}`, { method: "DELETE" }),
     onMutate: (id) =>
       c.begin((d) => {
