@@ -41,6 +41,10 @@ export function AssigneePicker({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          // The picker lives inside the task form: Enter must not submit it.
+          if (e.key === "Enter") e.preventDefault();
+        }}
         aria-label={t("filterUsers")}
         placeholder={t("filterUsers")}
         className={inputCls}
