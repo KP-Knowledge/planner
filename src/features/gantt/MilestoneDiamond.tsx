@@ -12,6 +12,7 @@ export function MilestoneDiamond({
   assignees,
   ariaLabel,
   onSelect,
+  bind,
 }: BarProps) {
   const cx = x + width / 2;
   const cy = row * ROW_HEIGHT + ROW_HEIGHT / 2;
@@ -24,7 +25,7 @@ export function MilestoneDiamond({
       aria-label={ariaLabel}
       className={`group outline-none ${onSelect ? "cursor-pointer" : ""}`}
       data-task-id={task.id}
-      {...selectHandlers(task, onSelect)}
+      {...(bind ? { onKeyDown: bind.onKeyDown } : selectHandlers(task, onSelect))}
     >
       <title>{ariaLabel}</title>
       <rect
@@ -47,6 +48,18 @@ export function MilestoneDiamond({
         transform={`rotate(45 ${cx} ${cy})`}
         fill={color}
       />
+      {bind && (
+        <rect
+          x={cx - half - 2}
+          y={cy - half - 2}
+          width={MILESTONE_SIZE + 4}
+          height={MILESTONE_SIZE + 4}
+          fill="transparent"
+          className="cursor-grab active:cursor-grabbing"
+          style={{ touchAction: "none" }}
+          {...bind.move}
+        />
+      )}
       <BarTail x={x + width + 6} row={row} assignees={assignees} label={task.name} />
     </g>
   );

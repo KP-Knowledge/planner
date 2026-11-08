@@ -7,7 +7,7 @@ import { btnSecondary } from "@/components/buttons";
 import { HttpError } from "@/lib/api-client";
 import { diffDays, todayInBangkok } from "@/lib/dates";
 import type { GanttData } from "@/server/projects";
-import { useGantt } from "./api";
+import { useGantt, useUpdateTask } from "./api";
 import { GridPane } from "./GridPane";
 import {
   GRID_WIDTH,
@@ -64,6 +64,7 @@ function GanttChart({ data }: { data: GanttData }) {
   const [zoom, setZoom] = useState<Zoom>("day");
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [today] = useState(() => todayInBangkok());
+  const updateTask = useUpdateTask(data.project.id);
   const scrollRef = useRef<HTMLDivElement>(null);
   const centerDate = useRef<string | null>(null);
   const didInitialScroll = useRef(false);
@@ -140,6 +141,9 @@ function GanttChart({ data }: { data: GanttData }) {
               onToggle={toggle}
             />
             <TimelinePane
+              data={data}
+              holidaySet={holidaySet}
+              onCommitDates={(id, dates) => updateTask.mutateAsync({ id, patch: dates })}
               rows={rows}
               origin={origin}
               end={end}

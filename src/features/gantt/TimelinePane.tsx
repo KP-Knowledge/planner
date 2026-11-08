@@ -1,6 +1,8 @@
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { diffDays, type ISODate } from "@/lib/dates";
+import type { HolidaySet } from "@/lib/workdays";
+import type { GanttData } from "@/server/projects";
 import { resolveTaskColor } from "@/lib/color";
 import type { Dependency } from "@/server/dependencies";
 import type { Team } from "@/server/teams";
@@ -21,11 +23,15 @@ import { MilestoneDiamond } from "./MilestoneDiamond";
 import { TaskBar } from "./TaskBar";
 import { TimeScale } from "./TimeScale";
 import { TodayLine } from "./TodayLine";
+import { useBarDrag } from "./useBarDrag";
 
 const ROW_LINES_ID = "gantt-row-lines";
 const DAY_LINES_ID = "gantt-day-lines";
 
 export function TimelinePane({
+  data,
+  holidaySet,
+  onCommitDates,
   rows,
   origin,
   end,
@@ -37,6 +43,9 @@ export function TimelinePane({
   usersById,
   onSelect,
 }: {
+  data: GanttData;
+  holidaySet: HolidaySet;
+  onCommitDates: (taskId: string, dates: { startDate: ISODate; endDate: ISODate }) => Promise<unknown> | void;
   rows: readonly Row[];
   origin: ISODate;
   end: ISODate;
@@ -51,6 +60,14 @@ export function TimelinePane({
   const t = useTranslations("gantt");
   const { taskLabel } = useTaskFormat();
   const px = PX_PER_DAY[zoom];
+  const { preview, bindings } = useBarDrag({
+    data,
+    origin,
+    zoom,
+    holidays: holidaySet,
+    onSelect,
+    onCommit: onCommitDates,
+  });
   const width = (diffDays(origin, end) + 1) * px;
   const height = rows.length * ROW_HEIGHT;
 
@@ -63,11 +80,11 @@ export function TimelinePane({
     const map = new Map<string, BarPosition>();
     rows.forEach((row, i) => {
       if (row.kind !== "task") return;
-      const g = taskGeometry(row.task, origin, zoom);
+      const g = taskGeometry(preview?.get(row.task.id) ?? row.task, origin, zoom);
       map.set(row.task.id, { x: g.x, width: g.width, row: i });
     });
     return map;
-  }, [rows, origin, zoom]);
+  }, [rows, origin, zoom, preview]);
 
   const todayInRange = today >= origin && today <= end;
   const todayX = dateToX(today, origin, zoom) + px / 2;
@@ -144,7 +161,8 @@ export function TimelinePane({
 
       {rows.map((row, i) => {
         if (row.kind !== "task") return null;
-        const { task, depth } = row;
+        const { depth } = row;
+        const task = preview?.get(row.task.id) ?? row.task;
         const g = taskGeometry(task, origin, zoom);
         const team = task.teamId ? (teamsById.get(task.teamId) ?? null) : null;
         const props = {
@@ -156,6 +174,7 @@ export function TimelinePane({
           assignees: resolveAssignees(task.assigneeIds, usersById),
           ariaLabel: taskLabel(task, depth),
           onSelect,
+          bind: bindings(task.id),
         };
         return task.isMilestone ? (
           <MilestoneDiamond key={task.id} {...props} />
