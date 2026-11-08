@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftToPatch, initialDraft, isDirty, validateDraft } from "@/features/gantt/taskDraft";
+import { dateFieldErrors, draftToPatch, initialDraft, isDirty, validateDraft } from "@/features/gantt/taskDraft";
 import type { Task } from "@/server/tasks";
 
 const task = {
@@ -116,5 +116,47 @@ describe("validateDraft", () => {
   it("reports name and dates problems together", () => {
     const d = { ...initialDraft(task), name: "", endDate: "2026-01-01" };
     expect(validateDraft(d)).toEqual({ ok: false, name: "empty", dates: "range" });
+  });
+});
+
+describe("base snapshot", () => {
+  it("is not dirty when the live task changed a field the user did not touch", () => {
+    const base = task;
+    const draft = initialDraft(base);
+    const live = { ...base, name: "Renamed elsewhere", progress: 90 } as Task;
+    expect(isDirty(base, draft)).toBe(false);
+    expect(draftToPatch(base, draft)).toEqual({});
+    // Diffing against the live task is what made this dirty and reverted the other edit.
+    expect(isDirty(live, draft)).toBe(true);
+  });
+
+  it("patch excludes untouched fields even when the live task moved on", () => {
+    const draft = { ...initialDraft(task), description: "Mine" };
+    expect(draftToPatch(task, draft)).toEqual({ description: "Mine" });
+  });
+});
+
+describe("dateFieldErrors", () => {
+  it("flags nothing for a valid draft", () => {
+    expect(dateFieldErrors(initialDraft(task))).toEqual({ start: false, end: false });
+  });
+
+  it("flags only the field with the bad year", () => {
+    expect(dateFieldErrors({ ...initialDraft(task), startDate: "1999-01-01" })).toEqual({ start: true, end: false });
+    expect(dateFieldErrors({ ...initialDraft(task), endDate: "2101-01-01" })).toEqual({ start: false, end: true });
+  });
+
+  it("flags only the cleared field", () => {
+    expect(dateFieldErrors({ ...initialDraft(task), startDate: "" })).toEqual({ start: true, end: false });
+    expect(dateFieldErrors({ ...initialDraft(task), endDate: "" })).toEqual({ start: false, end: true });
+  });
+
+  it("flags the end field when end is before start", () => {
+    expect(dateFieldErrors({ ...initialDraft(task), endDate: "2026-11-01" })).toEqual({ start: false, end: true });
+  });
+
+  it("never flags end for a milestone", () => {
+    const d = { ...initialDraft(task), isMilestone: true, endDate: "" };
+    expect(dateFieldErrors(d)).toEqual({ start: false, end: false });
   });
 });

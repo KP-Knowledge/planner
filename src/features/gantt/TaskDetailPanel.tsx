@@ -11,7 +11,7 @@ import { ColorPicker } from "../teams/ColorPicker";
 import { useDeleteTask, useUpdateTask } from "./api";
 import { AssigneePicker } from "./AssigneePicker";
 import { DATE_MAX, DATE_MIN } from "./dateInput";
-import { draftToPatch, initialDraft, isDirty, validateDraft, type TaskDraft } from "./taskDraft";
+import { dateFieldErrors, draftToPatch, initialDraft, isDirty, validateDraft, type TaskDraft } from "./taskDraft";
 
 const LABEL = "mb-1 block text-xs font-medium text-muted";
 
@@ -40,7 +40,9 @@ export function TaskDetailPanel({
   const updateTask = useUpdateTask(projectId);
   const deleteTask = useDeleteTask(projectId);
 
-  const [draft, setDraft] = useState<TaskDraft>(() => initialDraft(task));
+  // Snapshot at open: diffing against the live task would mark another client's change as a user edit.
+  const [base] = useState(task);
+  const [draft, setDraft] = useState<TaskDraft>(() => initialDraft(base));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -48,9 +50,10 @@ export function TaskDetailPanel({
     setDraft((d) => ({ ...d, [key]: value }));
 
   const validation = validateDraft(draft);
-  const dirty = editable && isDirty(task, draft);
+  const dirty = editable && isDirty(base, draft);
   const nameError = !validation.ok && validation.name === "empty";
   const dateError = !validation.ok ? validation.dates : null;
+  const fieldErrors = dateFieldErrors(draft);
   const dateMessage =
     dateError === "year" ? t("invalidYear") : dateError === "range" ? t("invalidRange") : dateError === "incomplete" ? t("invalidDate") : null;
 
@@ -62,7 +65,7 @@ export function TaskDetailPanel({
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!editable || !validation.ok) return;
-    const patch = draftToPatch(task, draft);
+    const patch = draftToPatch(base, draft);
     if (Object.keys(patch).length > 0) updateTask.mutate({ id: task.id, patch });
     onClose();
   };
@@ -133,8 +136,8 @@ export function TaskDetailPanel({
                   min={DATE_MIN}
                   max={DATE_MAX}
                   onChange={(e) => set("startDate", e.target.value)}
-                  aria-invalid={dateError !== null}
-                  aria-describedby={dateError ? dateErrId : undefined}
+                  aria-invalid={fieldErrors.start}
+                  aria-describedby={fieldErrors.start ? dateErrId : undefined}
                   className={inputCls}
                 />
               </div>
@@ -150,8 +153,8 @@ export function TaskDetailPanel({
                     min={DATE_MIN}
                     max={DATE_MAX}
                     onChange={(e) => set("endDate", e.target.value)}
-                    aria-invalid={dateError !== null}
-                    aria-describedby={dateError ? dateErrId : undefined}
+                    aria-invalid={fieldErrors.end}
+                    aria-describedby={fieldErrors.end ? dateErrId : undefined}
                     className={inputCls}
                   />
                 </div>

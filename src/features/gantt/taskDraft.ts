@@ -1,5 +1,5 @@
 import type { Task } from "@/server/tasks";
-import { resolveDraft } from "./dateInput";
+import { resolveDraft, yearInRange } from "./dateInput";
 import type { TaskPatchInput } from "./optimistic";
 
 export type TaskDraft = {
@@ -39,6 +39,16 @@ export function validateDraft(draft: TaskDraft): DraftValidation {
   const dates = result.ok ? null : result.reason;
   if (name === null && dates === null) return { ok: true };
   return { ok: false, name, dates };
+}
+
+/** Which date input is invalid, so aria-invalid lands on the right field. A milestone has no end input. */
+export function dateFieldErrors(draft: TaskDraft): { start: boolean; end: boolean } {
+  const result = resolveDraft({ start: draft.startDate, end: draft.endDate }, draft.isMilestone);
+  if (result.ok) return { start: false, end: false };
+  const endShown = !draft.isMilestone;
+  if (result.reason === "range") return { start: false, end: endShown };
+  const bad = (v: string) => v === "" || !yearInRange(v);
+  return { start: bad(draft.startDate), end: endShown && bad(draft.endDate) };
 }
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
