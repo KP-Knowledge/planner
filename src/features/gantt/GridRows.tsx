@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { useTranslations } from "next-intl";
-import { useRef, type CSSProperties, type MouseEvent } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { countWorkdays, type HolidaySet } from "@/lib/workdays";
 import type { Section } from "@/server/sections";
 import type { Task } from "@/server/tasks";
@@ -76,21 +76,17 @@ function translate(t: { x: number; y: number } | null): string | undefined {
   return t ? `translate3d(${Math.round(t.x)}px, ${Math.round(t.y)}px, 0)` : undefined;
 }
 
-/** Sortable wiring shared by every grid row. */
-function useGridRow(id: string, draggable: boolean, droppable = true) {
-  const s = useSortable({ id, disabled: { draggable: !draggable, droppable: !droppable } });
-  const el = useRef<HTMLDivElement | null>(null);
-  const setRef = (node: HTMLDivElement | null) => {
-    el.current = node;
-    s.setNodeRef(node);
-  };
-  const style: CSSProperties = {
+function rowStyle(
+  transform: { x: number; y: number } | null,
+  transition: string | undefined,
+  isDragging: boolean,
+): CSSProperties {
+  return {
     height: ROW_HEIGHT,
-    transform: translate(s.transform),
-    transition: s.transition,
-    ...(s.isDragging ? { position: "relative", zIndex: 30 } : null),
+    transform: translate(transform),
+    transition,
+    ...(isDragging ? { position: "relative", zIndex: 30 } : null),
   };
-  return { ...s, el, setRef, style };
 }
 
 function DragHandle({
@@ -128,8 +124,11 @@ function DragHandle({
 }
 
 /** Returns focus to the row after a keyboard-closed editor. */
-const refocus = (el: React.RefObject<HTMLDivElement | null>) => (reason: "key" | "blur") => {
-  if (reason === "key") requestAnimationFrame(() => el.current?.focus());
+const refocus = (id: string) => (reason: "key" | "blur") => {
+  if (reason !== "key") return;
+  requestAnimationFrame(() =>
+    document.querySelector<HTMLElement>(`[data-task-row="${id}"], [data-section-row="${id}"]`)?.focus(),
+  );
 };
 
 export function SectionRow({
@@ -156,11 +155,12 @@ export function SectionRow({
   onStopRename: () => void;
 }) {
   const t = useTranslations("gantt");
-  const r = useGridRow(section.id, editable);
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: section.id, disabled: { draggable: !editable } });
   return (
     <div
-      ref={r.setRef}
-      style={r.style}
+      ref={setNodeRef}
+      style={rowStyle(transform, transition, isDragging)}
       role="row"
       tabIndex={0}
       aria-level={1}
@@ -168,15 +168,15 @@ export function SectionRow({
       aria-label={t("sectionLabel", { name: section.name, count })}
       data-section-row={section.id}
       className={`flex items-center border-b border-border bg-surface px-1 ${FOCUS} ${
-        r.isDragging ? "shadow-md" : ""
+        isDragging ? "shadow-md" : ""
       }`}
     >
       {editable && (
         <DragHandle
           name={section.name}
-          setActivatorNodeRef={r.setActivatorNodeRef}
-          attributes={r.attributes}
-          listeners={r.listeners}
+          setActivatorNodeRef={setActivatorNodeRef}
+          attributes={attributes}
+          listeners={listeners}
         />
       )}
       <ToggleButton id={section.id} name={section.name} open={open} onToggle={onToggle} />
@@ -188,7 +188,7 @@ export function SectionRow({
             onSubmit={(name) => onRename(section.id, name)}
             onClose={(reason) => {
               onStopRename();
-              refocus(r.el)(reason);
+              refocus(section.id)(reason);
             }}
           />
         </div>
@@ -252,14 +252,15 @@ export function TaskRow({
   const t = useTranslations("gantt");
   const { date: fmt, taskLabel } = useTaskFormat();
   // Subtasks follow their parent, so only top-level rows can be dragged.
-  const r = useGridRow(task.id, editable && depth === 0);
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id, disabled: { draggable: !(editable && depth === 0) } });
   const activate = onSelect ? () => onSelect(task.id) : undefined;
   const duration = task.isMilestone ? "–" : String(countWorkdays(task.startDate, task.endDate, holidaySet));
 
   return (
     <div
-      ref={r.setRef}
-      style={r.style}
+      ref={setNodeRef}
+      style={rowStyle(transform, transition, isDragging)}
       role="row"
       tabIndex={0}
       aria-level={depth + 2}
@@ -275,7 +276,7 @@ export function TaskRow({
         }
       }}
       className={`flex items-center border-b border-border text-sm ${FOCUS} ${
-        r.isDragging ? "bg-card shadow-md" : selected ? "bg-primary/10" : "hover:bg-surface"
+        isDragging ? "bg-card shadow-md" : selected ? "bg-primary/10" : "hover:bg-surface"
       }`}
     >
       <div
@@ -286,9 +287,9 @@ export function TaskRow({
         {editable && depth === 0 ? (
           <DragHandle
             name={task.name}
-            setActivatorNodeRef={r.setActivatorNodeRef}
-            attributes={r.attributes}
-            listeners={r.listeners}
+            setActivatorNodeRef={setActivatorNodeRef}
+            attributes={attributes}
+            listeners={listeners}
           />
         ) : (
           <span aria-hidden className="inline-block w-4 shrink-0" />
@@ -305,7 +306,7 @@ export function TaskRow({
             onSubmit={(name) => onRename(task.id, name)}
             onClose={(reason) => {
               onStopRename();
-              refocus(r.el)(reason);
+              refocus(task.id)(reason);
             }}
           />
         ) : (
@@ -361,11 +362,14 @@ export function AddTaskRow({
   onStop: () => void;
 }) {
   const t = useTranslations("gantt");
-  const r = useGridRow(addRowId(sectionId), false);
+  const { setNodeRef, transform, transition } = useSortable({
+    id: addRowId(sectionId),
+    disabled: { draggable: true },
+  });
   return (
     <div
-      ref={r.setRef}
-      style={{ ...r.style, paddingLeft: 4 + 16 + 24 }}
+      ref={setNodeRef}
+      style={{ ...rowStyle(transform, transition, false), paddingLeft: 4 + 16 + 24 }}
       role="row"
       className="flex items-center border-b border-border pr-2"
     >
