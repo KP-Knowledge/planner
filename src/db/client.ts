@@ -9,7 +9,11 @@ function create(): NodePgDatabase<typeof schema> {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
-  return drizzle(new Pool({ connectionString }), { schema });
+  const pool = new Pool({ connectionString });
+  pool.on("error", (err) => {
+    console.error("postgres pool error", err);
+  });
+  return drizzle(pool, { schema });
 }
 
 export function getDb(): NodePgDatabase<typeof schema> {

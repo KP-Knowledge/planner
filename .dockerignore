@@ -1,0 +1,13 @@
+.git
+.next
+node_modules
+dist
+.env*
+!.env.example
+.superpowers
+docs
+tests
+*.tsbuildinfo
+Dockerfile
+docker-compose*.yml
+README.md
