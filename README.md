@@ -98,6 +98,8 @@ On every container start, `scripts/start.sh` runs `dist/migrate.mjs` (applies SQ
 
 Postgres data lives in the `planner-pgdata` volume, mounted at `/var/lib/postgresql` (the Postgres 18 image layout). Back it up before upgrading the image.
 
+Sessions last until the Auth.js JWT expires (30 days by default), even if the Keycloak user is disabled in the meantime. Shorten `session.maxAge` in `src/auth.ts` if you need faster revocation.
+
 Health check: `GET /api/health` returns `{ "ok": true }` after a `select 1`, or 503 `{ "ok": false }`. It needs no session.
 
 ## Holiday data
@@ -107,7 +109,13 @@ Holidays come from `date-holidays` (Thailand). It has gaps:
 - No Buddhist holidays from 2027 onward, because they follow the lunar calendar.
 - No substitution days (วันหยุดชดเชย) for any year.
 
-Add the missing days in the Holidays drawer (toolbar of the Gantt view), either for the whole organization or for a single project. Adding or removing a holiday does not move existing tasks. Tasks are re-aligned only when you edit them.
+Add the missing days in the Holidays drawer (toolbar of the Gantt view), either for the whole organization or for a single project.
+
+### Holidays and durations
+
+Adding or removing a holiday does not move existing task dates. Durations are counted in workdays, so the next time you move a task whose span crosses a changed holiday, its length is recomputed and its end date can shift.
+
+Re-importing a year after you moved a seeded holiday's date adds the original date again. Delete the extra entry if you do not want it.
 
 ## Scripts
 
