@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { HttpError } from "@/lib/api-client";
 import { btnGhostDanger, btnPrimary, inputCls } from "@/components/buttons";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { ISODate } from "@/lib/dates";
@@ -13,6 +14,11 @@ const WIDTH = 320;
 const MARGIN = 8;
 
 type Scope = "org" | "project";
+
+function useErrorText() {
+  const t = useTranslations("holidays");
+  return (err: unknown) => (err instanceof HttpError && err.code === "duplicate" ? t("duplicate") : t("saveFailed"));
+}
 
 export function ScopeBadge({ projectId }: { projectId: string | null }) {
   const t = useTranslations("holidays");
@@ -39,6 +45,7 @@ function HolidayRow({
   const t = useTranslations("holidays");
   const update = useUpdateHoliday(projectId);
   const remove = useDeleteHoliday(projectId);
+  const errorText = useErrorText();
   const [draft, setDraft] = useState(holiday.name);
   const [seen, setSeen] = useState(holiday.name);
   const [confirming, setConfirming] = useState(false);
@@ -83,6 +90,11 @@ function HolidayRow({
       ) : (
         <p className="text-sm">{holiday.name}</p>
       )}
+      {update.isError && (
+        <p role="alert" className="text-sm text-danger">
+          {errorText(update.error)}
+        </p>
+      )}
       {confirming && (
         <ConfirmDialog
           title={t("removeTitle")}
@@ -111,6 +123,7 @@ export function HolidayDayEditor({
   const t = useTranslations("holidays");
   const format = useFormatter();
   const create = useCreateHoliday(projectId);
+  const errorText = useErrorText();
   const radioName = useId();
   const [name, setName] = useState("");
   const [chosen, setChosen] = useState<Scope>("org");
@@ -176,7 +189,7 @@ export function HolidayDayEditor({
             </fieldset>
             {create.isError && (
               <p role="alert" className="text-sm text-danger">
-                {t("saveFailed")}
+                {errorText(create.error)}
               </p>
             )}
             <button type="submit" disabled={create.isPending || name.trim() === ""} className={btnPrimary}>
@@ -225,6 +238,7 @@ export function HolidayPopover({
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   const [pos] = useState(() => place(anchor));
+  const count = holidays.length;
 
   useEffect(() => {
     closeRef.current = onClose;
@@ -262,6 +276,14 @@ export function HolidayPopover({
       window.removeEventListener("resize", onMove);
     };
   }, [anchor]);
+
+  // Removing a holiday unmounts the button that had focus; keep focus inside the popover.
+  useEffect(() => {
+    const el = ref.current;
+    const active = document.activeElement;
+    if (!el || el.contains(active) || (active instanceof Element && active.closest("dialog"))) return;
+    el.focus({ preventScroll: true });
+  }, [count]);
 
   return (
     <div

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
 import { HttpError, apiFetch } from "@/lib/api-client";
@@ -11,6 +11,7 @@ export function useHolidays(year: number, projectId: string) {
   return useQuery({
     queryKey: holidaysKey(year, projectId),
     queryFn: () => apiFetch<Holiday[]>(`/api/holidays?year=${year}&projectId=${projectId}`),
+    placeholderData: keepPreviousData,
   });
 }
 

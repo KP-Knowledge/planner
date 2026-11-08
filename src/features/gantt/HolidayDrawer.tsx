@@ -58,6 +58,9 @@ export function HolidayDrawer({
     return map;
   }, [data]);
 
+  const yearLabel = (y: number) =>
+    format.dateTime(utcDate(`${String(y).padStart(4, "0")}-01-01`), { year: "numeric", timeZone: "UTC" });
+
   const goTo = (next: number) => {
     setYear(next);
     setSelected(null);
@@ -89,7 +92,7 @@ export function HolidayDrawer({
               ‹
             </button>
             <span className="min-w-14 text-center text-sm font-medium tabular-nums" aria-live="polite">
-              {year}
+              {yearLabel(year)}
             </span>
             <button
               type="button"
@@ -109,7 +112,7 @@ export function HolidayDrawer({
                 disabled={importHolidays.isPending}
                 className={btnPrimary}
               >
-                {importHolidays.isPending ? t("importing") : t("importYear", { year })}
+                {importHolidays.isPending ? t("importing") : t("importYear", { year: yearLabel(year) })}
               </button>
             )}
             <button type="button" onClick={onClose} className={btnSecondary}>
@@ -124,7 +127,7 @@ export function HolidayDrawer({
             {importHolidays.isSuccess && importHolidays.variables === year
               ? t("imported", { count: importHolidays.data.inserted })
               : null}
-            {importHolidays.isError ? t("importFailed") : null}
+            {importHolidays.isError && importHolidays.variables === year ? t("importFailed") : null}
           </p>
           {year >= NO_BUDDHIST_FROM && (
             <p role="note" className="rounded-md border border-warning bg-surface px-3 py-2 text-sm">
@@ -185,10 +188,10 @@ export function HolidayDrawer({
                 )}
               </div>
 
-              <section aria-label={t("listTitle", { year })}>
-                <h3 className="mb-2 text-sm font-semibold">{t("listTitle", { year })}</h3>
+              <section aria-label={t("listTitle", { year: yearLabel(year) })}>
+                <h3 className="mb-2 text-sm font-semibold">{t("listTitle", { year: yearLabel(year) })}</h3>
                 {data.length === 0 ? (
-                  <p className="text-sm text-muted">{t("listEmpty", { year })}</p>
+                  <p className="text-sm text-muted">{t("listEmpty", { year: yearLabel(year) })}</p>
                 ) : (
                   <ul className="divide-y divide-border rounded-lg border border-border">
                     {data.map((h) => (
