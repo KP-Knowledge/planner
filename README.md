@@ -42,6 +42,19 @@ pnpm exec tsc --noEmit
 pnpm build
 ```
 
+## E2E tests
+
+Playwright drives the production build against a local Keycloak (realm `planner`, user `e2e` / `e2e-password`) and a separate Postgres on port 5433. Port 8080 (Keycloak) and 3000 (app) must be free.
+
+```bash
+docker compose -f docker-compose.e2e.yml up -d
+pnpm exec playwright install chromium   # first run only
+pnpm test:e2e                           # migrates, builds and starts the app itself
+docker compose -f docker-compose.e2e.yml down -v
+```
+
+Wait until `http://localhost:8080/realms/planner/.well-known/openid-configuration` answers before running the tests. The suite signs in through Keycloak, then creates a project with two linked tasks, resizes one, and checks dark mode, the Thai locale and sign-out.
+
 ## Environment variables
 
 | Variable | Required | Description |
