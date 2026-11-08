@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useCreateDependency, useDeleteDependency } from "./api";
-import { diffDays, type ISODate } from "@/lib/dates";
+import { dayOfWeek, diffDays, type ISODate } from "@/lib/dates";
 import type { HolidaySet } from "@/lib/workdays";
 import type { GanttData } from "@/server/projects";
 import { resolveTaskColor } from "@/lib/color";
@@ -30,6 +30,7 @@ import { useDependencyDrag } from "./useDependencyDrag";
 
 const ROW_LINES_ID = "gantt-row-lines";
 const DAY_LINES_ID = "gantt-day-lines";
+const WEEK_LINES_ID = "gantt-week-lines";
 const ROW_LINES_TILE = 100;
 
 export function TimelinePane({
@@ -81,6 +82,7 @@ export function TimelinePane({
   });
   const width = (diffDays(origin, end) + 1) * px;
   const height = rows.length * ROW_HEIGHT;
+  const firstSundayX = ((7 - dayOfWeek(origin)) % 7) * px;
 
   const shaded = useMemo(
     () => nonWorkingDays(origin, end, holidayNames),
@@ -141,9 +143,21 @@ export function TimelinePane({
             <line x1={0.5} x2={0.5} y1={0} y2={ROW_HEIGHT} className="stroke-border" strokeOpacity={0.5} />
           </pattern>
         )}
+        {zoom === "week" && (
+          <pattern
+            id={WEEK_LINES_ID}
+            x={firstSundayX}
+            width={7 * px}
+            height={ROW_HEIGHT}
+            patternUnits="userSpaceOnUse"
+          >
+            <line x1={0.5} x2={0.5} y1={0} y2={ROW_HEIGHT} className="stroke-border" strokeOpacity={0.5} />
+          </pattern>
+        )}
       </defs>
 
       {zoom === "day" && <rect width={width} height={height} fill={`url(#${DAY_LINES_ID})`} />}
+      {zoom === "week" && <rect width={width} height={height} fill={`url(#${WEEK_LINES_ID})`} />}
 
       {shaded.map((d) => (
         <rect
