@@ -2,6 +2,24 @@
 
 A Gantt-chart planner for projects and tasks, styled after [Instagantt](https://www.instagantt.com). One organization, no roles: everyone who signs in can see and edit every project. Sign-in goes through an existing Keycloak server.
 
+## Screenshots
+
+![Gantt view with sections, tasks, dependencies and the today line](docs/screenshots/gantt.png)
+
+| Projects | Holidays drawer |
+|---|---|
+| ![Project list](docs/screenshots/projects.png) | ![Thai public holidays per year, organization and project](docs/screenshots/holidays.png) |
+
+| Dark theme | Thai UI |
+|---|---|
+| ![Gantt view in dark theme](docs/screenshots/gantt-dark.png) | ![Gantt view in Thai, with Buddhist-era dates](docs/screenshots/gantt-thai.png) |
+
+| Teams | Sign-in |
+|---|---|
+| ![Teams with colors](docs/screenshots/teams.png) | ![Sign-in page](docs/screenshots/signin.png) |
+
+The screenshots use the demo data from `pnpm db:seed-demo`.
+
 ## Features
 
 - Projects, sections, tasks, one level of subtasks and milestones.
