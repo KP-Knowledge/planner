@@ -31,3 +31,17 @@ export async function apiFetch<T>(url: string, init: ApiInit = {}): Promise<T> {
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
+
+export const SIGNIN_PATH = "/signin";
+
+export function createUnauthorizedHandler(
+  redirect: (url: string) => void = (url) => window.location.assign(url),
+): (error: unknown) => void {
+  let redirected = false;
+  return (error) => {
+    if (redirected) return;
+    if (!(error instanceof HttpError) || error.status !== 401) return;
+    redirected = true;
+    redirect(SIGNIN_PATH);
+  };
+}
