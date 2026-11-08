@@ -30,7 +30,7 @@ pnpm dev                       # http://localhost:3000
 Optional demo data (a project with sections, tasks, teams and dependencies):
 
 ```bash
-pnpm exec tsx --env-file=.env scripts/seed-demo.ts
+pnpm db:seed-demo
 ```
 
 Tests and checks:
@@ -47,7 +47,7 @@ pnpm build
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Local dev only | Postgres connection string. `docker-compose.yml` builds it for the container from `POSTGRES_PASSWORD`. |
-| `POSTGRES_PASSWORD` | Yes | Password for the `planner` database user. |
+| `POSTGRES_PASSWORD` | Yes | Password for the `planner` database user. It goes into `DATABASE_URL` unescaped, so use URL-safe characters only (no `@`, `/`, `:` or `#`). |
 | `AUTH_SECRET` | Yes | Random secret for Auth.js. Generate with `openssl rand -base64 32`. |
 | `AUTH_URL` | **Yes in production** | Public base URL, for example `https://planner.example.com`. Sign-in redirects and the Keycloak logout redirect are built from it. Without it the app falls back to the `x-forwarded-host` header. |
 | `AUTH_TRUST_HOST` | Yes behind a proxy | Set to `true` behind Dokploy/Traefik so Auth.js trusts the forwarded host headers. Defaults to `true` in `docker-compose.yml`. |
@@ -105,6 +105,6 @@ Add the missing days in the Holidays drawer (toolbar of the Gantt view), either 
 | `pnpm start` | Run `next start`. |
 | `pnpm lint` | ESLint. |
 | `pnpm test` | Vitest. |
-| `pnpm db:migrate` | Apply migrations and seed holidays against `DATABASE_URL` (via tsx). |
+| `pnpm db:migrate` | Apply migrations and seed holidays against `DATABASE_URL`. Reads `.env` if it exists. |
+| `pnpm db:seed-demo` | Create a demo project with sections, tasks, teams and dependencies. Reads `.env` if it exists. |
 | `pnpm build:migrate` | Bundle `src/db/migrate.ts` into `dist/migrate.mjs` for the Docker image. |
-| `scripts/seed-demo.ts` | Create a demo project (run with `pnpm exec tsx`). |

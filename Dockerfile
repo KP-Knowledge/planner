@@ -20,6 +20,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
+# The repo has no public/ directory, so it is not copied. Add a COPY for it if one is created.
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 COPY --from=build --chown=node:node /app/dist/migrate.mjs ./dist/migrate.mjs
 COPY --chown=node:node scripts/start.sh ./scripts/start.sh
