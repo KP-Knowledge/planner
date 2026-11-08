@@ -54,7 +54,7 @@ export function ColorPicker({
             onClick={() => onChange(color)}
             onKeyDown={(e) => onKeyDown(e, i)}
             style={{ backgroundColor: color }}
-            className={`h-6 w-6 rounded-full border border-black/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+            className={`h-6 w-6 rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               checked ? "ring-2 ring-text ring-offset-2 ring-offset-card" : ""
             }`}
           />

@@ -41,7 +41,7 @@ function TeamRow({ team, onDelete }: { team: Team; onDelete: () => void }) {
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <span
         aria-hidden
-        className="h-4 w-4 shrink-0 rounded-full border border-black/10"
+        className="h-4 w-4 shrink-0 rounded-full border border-border"
         style={{ backgroundColor: team.color }}
       />
       <div className="min-w-40 flex-1">
