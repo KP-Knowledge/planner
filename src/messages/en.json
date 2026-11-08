@@ -52,6 +52,7 @@
     "error": "Something went wrong. Please try again.",
     "typeToConfirm": "Type \"{text}\" to confirm",
     "dismiss": "Dismiss",
+    "close": "Close",
     "delete": "Delete"
   },
   "teams": {
@@ -119,7 +120,6 @@
     "deleteDepBody": "Remove the link from \"{from}\" to \"{to}\"? Both tasks keep their current dates.",
     "dependencyLabel": "Dependency from {from} to {to}. Press Enter to delete.",
     "panelLabel": "Task details",
-    "panelClose": "Close task details",
     "fieldName": "Name",
     "fieldDescription": "Description",
     "fieldStart": "Start date",
@@ -135,6 +135,11 @@
     "noUsers": "No people found",
     "invalidRange": "End date can't be before the start date.",
     "invalidYear": "Year must be between 2000 and 2100.",
+    "emptyName": "Name can't be empty.",
+    "invalidDate": "Enter a complete date.",
+    "discardTitle": "Discard changes?",
+    "discardBody": "Your edits to this task haven't been saved.",
+    "discardConfirm": "Discard",
     "deleteTask": "Delete task",
     "holidays": "Holidays"
   },

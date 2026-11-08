@@ -1,16 +1,17 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import { btnGhost, btnGhostDanger, inputCls } from "@/components/buttons";
+import { useId, useState, type FormEvent } from "react";
+import { btnGhostDanger, btnGhost, btnPrimary, btnSecondary, inputCls } from "@/components/buttons";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Modal } from "@/components/Modal";
 import type { GanttData } from "@/server/projects";
 import type { Task } from "@/server/tasks";
 import { ColorPicker } from "../teams/ColorPicker";
 import { useDeleteTask, useUpdateTask } from "./api";
 import { AssigneePicker } from "./AssigneePicker";
-import { DATE_MAX, DATE_MIN, resolveDraft } from "./dateInput";
-import type { TaskPatchInput } from "./optimistic";
+import { DATE_MAX, DATE_MIN } from "./dateInput";
+import { draftToPatch, initialDraft, isDirty, validateDraft, type TaskDraft } from "./taskDraft";
 
 const LABEL = "mb-1 block text-xs font-medium text-muted";
 
@@ -24,322 +25,241 @@ export type TaskDetailPanelProps = {
   onDeleted?: () => void;
 };
 
-function findOrigin(taskId: string): HTMLElement | null {
-  return document.querySelector<HTMLElement>(`[data-task-id="${taskId}"], [data-task-row="${taskId}"]`);
-}
-
-export function TaskDetailPanel({ task, onClose, ...rest }: TaskDetailPanelProps) {
-  const t = useTranslations("gantt");
-  const titleId = useId();
-  const panelRef = useRef<HTMLElement>(null);
-  const originRef = useRef<HTMLElement | null>(null);
-  const taskIdRef = useRef(task.id);
-
-  // Remember what opened the panel, then move focus inside. Runs again when another task is selected.
-  useEffect(() => {
-    taskIdRef.current = task.id;
-    const active = document.activeElement as HTMLElement | null;
-    if (active && active !== document.body && !panelRef.current?.contains(active)) {
-      originRef.current = active;
-    }
-    panelRef.current?.focus();
-  }, [task.id]);
-
-  useEffect(
-    () => () => {
-      const origin = originRef.current;
-      const target =
-        origin?.isConnected &&
-        (origin.dataset.taskId === taskIdRef.current || origin.dataset.taskRow === taskIdRef.current)
-          ? origin
-          : findOrigin(taskIdRef.current);
-      target?.focus();
-    },
-    [],
-  );
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== "Escape" || e.defaultPrevented) return;
-    // Esc inside the delete confirmation closes only that dialog.
-    if (e.target instanceof Element && e.target.closest("dialog")) return;
-    e.preventDefault();
-    const active = document.activeElement;
-    // Commit a pending edit (save-on-blur) before the form unmounts.
-    if (active instanceof HTMLElement && panelRef.current?.contains(active)) active.blur();
-    onClose();
-  };
-
-  return (
-    <aside
-      ref={panelRef}
-      tabIndex={-1}
-      aria-labelledby={titleId}
-      onKeyDown={onKeyDown}
-      className="flex w-80 max-w-[85vw] shrink-0 flex-col overflow-y-auto border-l border-border bg-card outline-none"
-    >
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <h2 id={titleId} className="text-sm font-semibold">
-          {t("panelLabel")}
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("panelClose")}
-          className={`${btnGhost} !px-1.5 !py-1`}
-        >
-          <svg width={14} height={14} viewBox="0 0 14 14" aria-hidden>
-            <path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
-      <TaskForm key={task.id} task={task} {...rest} />
-    </aside>
-  );
-}
-
-function TaskForm({
+export function TaskDetailPanel({
   projectId,
   task,
   teams,
   users,
   editable,
+  onClose,
   onDeleted,
-}: Omit<TaskDetailPanelProps, "onClose">) {
+}: TaskDetailPanelProps) {
   const t = useTranslations("gantt");
+  const tc = useTranslations("common");
   const ids = { name: useId(), desc: useId(), start: useId(), end: useId(), team: useId(), progress: useId() };
   const updateTask = useUpdateTask(projectId);
   const deleteTask = useDeleteTask(projectId);
 
-  const [name, setName] = useState(task.name);
-  const [description, setDescription] = useState(task.description ?? "");
-  // Another client (or a rollback) changed these: replace the local text instead of showing stale input.
-  const [seen, setSeen] = useState({ name: task.name, description: task.description });
-  if (seen.name !== task.name || seen.description !== task.description) {
-    setSeen({ name: task.name, description: task.description });
-    setName(task.name);
-    setDescription(task.description ?? "");
-  }
-  const [dates, setDates] = useState<{ start: string; end: string } | null>(null);
-  const [progress, setProgress] = useState<number | null>(null);
+  const [draft, setDraft] = useState<TaskDraft>(() => initialDraft(task));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  const save = (patch: TaskPatchInput) => updateTask.mutate({ id: task.id, patch });
+  const set = <K extends keyof TaskDraft>(key: K, value: TaskDraft[K]) =>
+    setDraft((d) => ({ ...d, [key]: value }));
 
-  const start = dates?.start ?? task.startDate;
-  const end = dates?.end ?? task.endDate;
-  const draft = resolveDraft({ start, end }, task.isMilestone);
-  const yearInvalid = !draft.ok && draft.reason === "year";
-  const rangeInvalid = !draft.ok && draft.reason === "range";
+  const validation = validateDraft(draft);
+  const dirty = editable && isDirty(task, draft);
+  const nameError = !validation.ok && validation.name === "empty";
+  const dateError = !validation.ok ? validation.dates : null;
+  const dateMessage =
+    dateError === "year" ? t("invalidYear") : dateError === "range" ? t("invalidRange") : dateError === "incomplete" ? t("invalidDate") : null;
 
-  // Typing only updates the local draft. Chrome fires `change` per keystroke once the segments are filled,
-  // so saving here would persist partial years like 0202.
-  const changeDate = (field: "start" | "end", value: string) => {
-    setDates({ start, end, [field]: value });
+  const requestClose = () => {
+    if (dirty) setConfirmDiscard(true);
+    else onClose();
   };
 
-  const commitDates = () => {
-    if (!dates) return;
-    const result = resolveDraft(dates, task.isMilestone);
-    if (!result.ok) {
-      if (result.reason === "incomplete") setDates(null);
-      return;
-    }
-    setDates(null);
-    const patch: TaskPatchInput = {};
-    if (result.start !== task.startDate) patch.startDate = result.start;
-    if (result.end !== task.endDate) patch.endDate = result.end;
-    if (Object.keys(patch).length > 0) save(patch);
-  };
-
-  const dateKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return;
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    commitDates();
+    if (!editable || !validation.ok) return;
+    const patch = draftToPatch(task, draft);
+    if (Object.keys(patch).length > 0) updateTask.mutate({ id: task.id, patch });
+    onClose();
   };
 
-  const commitName = () => {
-    const trimmed = name.trim();
-    setName(trimmed === "" ? task.name : trimmed);
-    if (trimmed !== "" && trimmed !== task.name) save({ name: trimmed });
-  };
-
-  const commitDescription = () => {
-    const next = description.trim() === "" ? null : description;
-    if (next !== task.description) save({ description: next });
-  };
-
-  const commitProgress = () => {
-    if (progress !== null && progress !== task.progress) save({ progress });
-    setProgress(null);
-  };
-
-  const shownProgress = progress ?? task.progress;
+  const dateErrId = `${ids.end}-err`;
 
   return (
     <>
-      <fieldset disabled={!editable} className="m-0 min-w-0 space-y-4 border-0 p-4">
-        <div>
-          <label htmlFor={ids.name} className={LABEL}>
-            {t("fieldName")}
-          </label>
-          <input
-            id={ids.name}
-            value={name}
-            maxLength={200}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={commitName}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-            }}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label htmlFor={ids.desc} className={LABEL}>
-            {t("fieldDescription")}
-          </label>
-          <textarea
-            id={ids.desc}
-            value={description}
-            rows={4}
-            maxLength={10000}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={commitDescription}
-            className={`${inputCls} resize-y`}
-          />
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={task.isMilestone}
-            onChange={(e) => {
-              setDates(null);
-              save({ isMilestone: e.target.checked });
-            }}
-            className="accent-primary"
-          />
-          {t("fieldMilestone")}
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor={ids.start} className={LABEL}>
-              {t("fieldStart")}
-            </label>
-            <input
-              id={ids.start}
-              type="date"
-              value={start}
-              min={DATE_MIN}
-              max={DATE_MAX}
-              onChange={(e) => changeDate("start", e.target.value)}
-              onBlur={commitDates}
-              onKeyDown={dateKeyDown}
-              aria-invalid={rangeInvalid || yearInvalid}
-              className={inputCls}
-            />
-          </div>
-          {!task.isMilestone && (
+      <Modal title={t("panelLabel")} onClose={onClose} onDismiss={requestClose} size="lg">
+        <form onSubmit={submit} noValidate className="mt-4">
+          <fieldset
+            disabled={!editable}
+            className="m-0 max-h-[calc(100dvh-16rem)] min-w-0 space-y-4 overflow-y-auto border-0 p-1"
+          >
             <div>
-              <label htmlFor={ids.end} className={LABEL}>
-                {t("fieldEnd")}
+              <label htmlFor={ids.name} className={LABEL}>
+                {t("fieldName")}
               </label>
               <input
-                id={ids.end}
-                type="date"
-                value={end}
-                min={DATE_MIN}
-                max={DATE_MAX}
-                onChange={(e) => changeDate("end", e.target.value)}
-                onBlur={commitDates}
-                onKeyDown={dateKeyDown}
-                aria-invalid={rangeInvalid || yearInvalid}
-                aria-describedby={rangeInvalid || yearInvalid ? `${ids.end}-err` : undefined}
+                id={ids.name}
+                value={draft.name}
+                maxLength={200}
+                onChange={(e) => set("name", e.target.value)}
+                aria-invalid={nameError}
+                aria-describedby={nameError ? `${ids.name}-err` : undefined}
                 className={inputCls}
               />
+              {nameError && (
+                <p id={`${ids.name}-err`} role="alert" className="mt-1 text-sm text-danger">
+                  {t("emptyName")}
+                </p>
+              )}
             </div>
-          )}
-        </div>
-        {(rangeInvalid || yearInvalid) && (
-          <p id={`${ids.end}-err`} role="alert" className="-mt-2 text-sm text-danger">
-            {yearInvalid ? t("invalidYear") : t("invalidRange")}
-          </p>
-        )}
 
-        {!task.isMilestone && (
-          <div>
-            <label htmlFor={ids.progress} className={`${LABEL} flex justify-between`}>
-              <span>{t("fieldProgress")}</span>
-              <span className="tabular-nums text-text">{shownProgress}%</span>
+            <div>
+              <label htmlFor={ids.desc} className={LABEL}>
+                {t("fieldDescription")}
+              </label>
+              <textarea
+                id={ids.desc}
+                value={draft.description}
+                rows={4}
+                maxLength={10000}
+                onChange={(e) => set("description", e.target.value)}
+                className={`${inputCls} resize-y`}
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={draft.isMilestone}
+                onChange={(e) => set("isMilestone", e.target.checked)}
+                className="accent-primary"
+              />
+              {t("fieldMilestone")}
             </label>
-            <input
-              id={ids.progress}
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={shownProgress}
-              aria-valuetext={`${shownProgress}%`}
-              onChange={(e) => setProgress(Number(e.target.value))}
-              onPointerUp={commitProgress}
-              onKeyUp={commitProgress}
-              onBlur={commitProgress}
-              className="w-full accent-primary"
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor={ids.start} className={LABEL}>
+                  {t("fieldStart")}
+                </label>
+                <input
+                  id={ids.start}
+                  type="date"
+                  value={draft.startDate}
+                  min={DATE_MIN}
+                  max={DATE_MAX}
+                  onChange={(e) => set("startDate", e.target.value)}
+                  aria-invalid={dateError !== null}
+                  aria-describedby={dateError ? dateErrId : undefined}
+                  className={inputCls}
+                />
+              </div>
+              {!draft.isMilestone && (
+                <div>
+                  <label htmlFor={ids.end} className={LABEL}>
+                    {t("fieldEnd")}
+                  </label>
+                  <input
+                    id={ids.end}
+                    type="date"
+                    value={draft.endDate}
+                    min={DATE_MIN}
+                    max={DATE_MAX}
+                    onChange={(e) => set("endDate", e.target.value)}
+                    aria-invalid={dateError !== null}
+                    aria-describedby={dateError ? dateErrId : undefined}
+                    className={inputCls}
+                  />
+                </div>
+              )}
+            </div>
+            {dateMessage && (
+              <p id={dateErrId} role="alert" className="-mt-2 text-sm text-danger">
+                {dateMessage}
+              </p>
+            )}
+
+            {!draft.isMilestone && (
+              <div>
+                <label htmlFor={ids.progress} className={`${LABEL} flex justify-between`}>
+                  <span>{t("fieldProgress")}</span>
+                  <span className="tabular-nums text-text">{draft.progress}%</span>
+                </label>
+                <input
+                  id={ids.progress}
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={draft.progress}
+                  aria-valuetext={`${draft.progress}%`}
+                  onChange={(e) => set("progress", Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor={ids.team} className={LABEL}>
+                {t("fieldTeam")}
+              </label>
+              <select
+                id={ids.team}
+                value={draft.teamId}
+                onChange={(e) => set("teamId", e.target.value)}
+                className={inputCls}
+              >
+                <option value="">{t("noTeam")}</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <span className={LABEL}>{t("fieldColor")}</span>
+              <ColorPicker
+                label={t("fieldColor")}
+                value={draft.color ?? ""}
+                onChange={(color) => set("color", color)}
+              />
+              <button
+                type="button"
+                disabled={draft.color === null}
+                onClick={() => set("color", null)}
+                className={`${btnGhost} mt-2 !px-2 !py-1 text-xs`}
+              >
+                {t("useTeamColor")}
+              </button>
+            </div>
+
+            <AssigneePicker
+              users={users}
+              value={draft.assigneeIds}
+              onChange={(assigneeIds) => set("assigneeIds", assigneeIds)}
             />
+          </fieldset>
+
+          <div className="mt-4 flex items-center gap-2 border-t border-border pt-4">
+            {editable ? (
+              <>
+                <button type="button" onClick={() => setConfirmDelete(true)} className={btnGhostDanger}>
+                  {t("deleteTask")}
+                </button>
+                <span className="flex-1" />
+                <button type="button" onClick={requestClose} className={btnSecondary}>
+                  {tc("cancel")}
+                </button>
+                <button type="submit" disabled={!validation.ok || !dirty} className={btnPrimary}>
+                  {tc("save")}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1" />
+                <button type="button" onClick={onClose} className={btnSecondary}>
+                  {tc("close")}
+                </button>
+              </>
+            )}
           </div>
-        )}
+        </form>
+      </Modal>
 
-        <div>
-          <label htmlFor={ids.team} className={LABEL}>
-            {t("fieldTeam")}
-          </label>
-          <select
-            id={ids.team}
-            value={task.teamId ?? ""}
-            onChange={(e) => save({ teamId: e.target.value || null })}
-            className={inputCls}
-          >
-            <option value="">{t("noTeam")}</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <span className={LABEL}>{t("fieldColor")}</span>
-          <ColorPicker
-            label={t("fieldColor")}
-            value={task.color ?? ""}
-            onChange={(color) => save({ color })}
-          />
-          <button
-            type="button"
-            disabled={task.color === null}
-            onClick={() => save({ color: null })}
-            className={`${btnGhost} mt-2 !px-2 !py-1 text-xs`}
-          >
-            {t("useTeamColor")}
-          </button>
-        </div>
-
-        <AssigneePicker
-          users={users}
-          value={task.assigneeIds}
-          onChange={(assigneeIds) => save({ assigneeIds })}
+      {confirmDiscard && (
+        <ConfirmDialog
+          title={t("discardTitle")}
+          body={t("discardBody")}
+          confirmLabel={t("discardConfirm")}
+          onConfirm={onClose}
+          onClose={() => setConfirmDiscard(false)}
         />
-      </fieldset>
-
-      {editable && (
-        <div className="mt-auto border-t border-border p-4">
-          <button type="button" onClick={() => setConfirmDelete(true)} className={btnGhostDanger}>
-            {t("deleteTask")}
-          </button>
-        </div>
       )}
 
       {confirmDelete && (
@@ -350,6 +270,7 @@ function TaskForm({
           onConfirm={async () => {
             await deleteTask.mutateAsync(task.id);
             onDeleted?.();
+            onClose();
           }}
           onClose={() => setConfirmDelete(false)}
         />

@@ -5,10 +5,15 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 export function Modal({
   title,
   onClose,
+  onDismiss,
+  size = "md",
   children,
 }: {
   title: string;
   onClose: () => void;
+  /** Called for Esc and backdrop click instead of closing right away, so the caller can ask first. */
+  onDismiss?: () => void;
+  size?: "md" | "lg";
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -31,10 +36,18 @@ export function Modal({
       ref={ref}
       aria-labelledby={titleId}
       onClose={onClose}
+      onCancel={
+        onDismiss
+          ? (e) => {
+              e.preventDefault();
+              onDismiss();
+            }
+          : undefined
+      }
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) (onDismiss ?? onClose)();
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-border bg-card p-0 text-text shadow-xl backdrop:bg-black/40"
+      className={`m-auto w-[calc(100%-2rem)] ${size === "lg" ? "max-w-[560px]" : "max-w-md"} rounded-lg border border-border bg-card p-0 text-text shadow-xl backdrop:bg-black/40`}
     >
       <div className="p-6">
         <h2 id={titleId} className="text-lg font-semibold">

@@ -52,6 +52,7 @@
     "error": "เกิดข้อผิดพลาด ลองอีกครั้ง",
     "typeToConfirm": "พิมพ์ \"{text}\" เพื่อยืนยัน",
     "dismiss": "ปิด",
+    "close": "ปิด",
     "delete": "ลบ"
   },
   "teams": {
@@ -119,7 +120,6 @@
     "deleteDepBody": "ลบเส้นเชื่อมจาก \"{from}\" ไป \"{to}\" วันที่ของทั้งสองงานจะคงเดิม",
     "dependencyLabel": "เส้นเชื่อมจาก {from} ไป {to} กด Enter เพื่อลบ",
     "panelLabel": "รายละเอียดงาน",
-    "panelClose": "ปิดรายละเอียดงาน",
     "fieldName": "ชื่อ",
     "fieldDescription": "คำอธิบาย",
     "fieldStart": "วันที่เริ่ม",
@@ -135,6 +135,11 @@
     "noUsers": "ไม่พบคน",
     "invalidRange": "วันที่จบต้องไม่ก่อนวันที่เริ่ม",
     "invalidYear": "ปีต้องอยู่ระหว่าง 2000 ถึง 2100",
+    "emptyName": "ต้องใส่ชื่องาน",
+    "invalidDate": "ใส่วันที่ให้ครบ",
+    "discardTitle": "ทิ้งการแก้ไขไหม",
+    "discardBody": "การแก้ไขงานนี้ยังไม่ได้บันทึก",
+    "discardConfirm": "ทิ้ง",
     "deleteTask": "ลบงาน",
     "holidays": "วันหยุด"
   },
