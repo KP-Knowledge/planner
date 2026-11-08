@@ -21,6 +21,7 @@ export type TaskDetailPanelProps = {
   users: GanttData["users"];
   editable: boolean;
   onClose: () => void;
+  onDeleted?: () => void;
 };
 
 function findOrigin(taskId: string): HTMLElement | null {
@@ -102,6 +103,7 @@ function TaskForm({
   teams,
   users,
   editable,
+  onDeleted,
 }: Omit<TaskDetailPanelProps, "onClose">) {
   const t = useTranslations("gantt");
   const ids = { name: useId(), desc: useId(), start: useId(), end: useId(), team: useId(), progress: useId() };
@@ -110,6 +112,13 @@ function TaskForm({
 
   const [name, setName] = useState(task.name);
   const [description, setDescription] = useState(task.description ?? "");
+  // Another client (or a rollback) changed these: replace the local text instead of showing stale input.
+  const [seen, setSeen] = useState({ name: task.name, description: task.description });
+  if (seen.name !== task.name || seen.description !== task.description) {
+    setSeen({ name: task.name, description: task.description });
+    setName(task.name);
+    setDescription(task.description ?? "");
+  }
   const [dates, setDates] = useState<{ start: string; end: string } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -338,7 +347,10 @@ function TaskForm({
           title={t("deleteTaskTitle")}
           body={t("deleteTaskBody", { name: task.name })}
           confirmLabel={t("menuDelete")}
-          onConfirm={() => deleteTask.mutateAsync(task.id)}
+          onConfirm={async () => {
+            await deleteTask.mutateAsync(task.id);
+            onDeleted?.();
+          }}
           onClose={() => setConfirmDelete(false)}
         />
       )}

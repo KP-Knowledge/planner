@@ -118,6 +118,9 @@ function GanttChart({ data }: { data: GanttData }) {
     setZoom(next);
   };
 
+  // The deleted row's focus target is gone. Wait a frame: the confirm modal keeps the page inert until it closes.
+  const focusChart = () => requestAnimationFrame(() => scrollRef.current?.focus({ preventScroll: true }));
+
   const toggle = (id: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -141,7 +144,11 @@ function GanttChart({ data }: { data: GanttData }) {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1">
-          <div ref={scrollRef} className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-card">
+          <div
+            ref={scrollRef}
+            tabIndex={-1}
+            className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-card outline-none"
+          >
             <div className="flex" style={{ width: GRID_WIDTH + timelineWidth }}>
               <GridPane
                 projectId={data.project.id}
@@ -155,6 +162,7 @@ function GanttChart({ data }: { data: GanttData }) {
                 selectedId={selectedTask?.id}
                 onToggle={toggle}
                 onSelect={setSelectedId}
+                onDeleted={focusChart}
               />
               <TimelinePane
                 data={data}
@@ -171,6 +179,7 @@ function GanttChart({ data }: { data: GanttData }) {
                 usersById={usersById}
                 onSelect={setSelectedId}
                 editable={editable}
+                onDeleted={focusChart}
               />
             </div>
           </div>
@@ -181,6 +190,7 @@ function GanttChart({ data }: { data: GanttData }) {
               teams={data.teams}
               users={data.users}
               editable={editable}
+              onDeleted={focusChart}
               onClose={() => setSelectedId(null)}
             />
           )}

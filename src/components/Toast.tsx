@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const show = useCallback<ShowToast>(
     (message, tone = "info") => {
       const id = nextId.current++;
-      setItems((prev) => [...prev.slice(-3), { id, message, tone }]);
+      setItems((prev) => [...prev.slice(-2), { id, message, tone }]);
       setTimeout(() => dismiss(id), DISMISS_MS);
     },
     [dismiss],

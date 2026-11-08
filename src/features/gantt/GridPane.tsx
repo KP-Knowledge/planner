@@ -39,6 +39,8 @@ export type GridPaneProps = {
   editable?: boolean;
   onToggle: (id: string) => void;
   onSelect?: (taskId: string) => void;
+  /** Called after a task or section is deleted so the parent can restore focus. */
+  onDeleted?: () => void;
 };
 
 type PendingDelete =
@@ -84,6 +86,7 @@ function GridPaneImpl({
   editable = false,
   onToggle,
   onSelect,
+  onDeleted,
 }: GridPaneProps) {
   const t = useTranslations("gantt");
   const dndId = useId();
@@ -255,11 +258,11 @@ function GridPaneImpl({
                 : t("deleteSectionBodyEmpty", { name: pendingDelete.name })
           }
           confirmLabel={t("menuDelete")}
-          onConfirm={() =>
-            pendingDelete.kind === "task"
-              ? deleteTask.mutateAsync(pendingDelete.id)
-              : deleteSection.mutateAsync(pendingDelete.id)
-          }
+          onConfirm={async () => {
+            if (pendingDelete.kind === "task") await deleteTask.mutateAsync(pendingDelete.id);
+            else await deleteSection.mutateAsync(pendingDelete.id);
+            onDeleted?.();
+          }}
           onClose={() => setPendingDelete(null)}
         />
       )}

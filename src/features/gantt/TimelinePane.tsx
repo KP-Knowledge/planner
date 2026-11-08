@@ -46,6 +46,7 @@ export function TimelinePane({
   usersById,
   onSelect,
   editable,
+  onDeleted,
 }: {
   data: GanttData;
   holidaySet: HolidaySet;
@@ -62,6 +63,7 @@ export function TimelinePane({
   onSelect?: (taskId: string) => void;
   /** False for archived projects: no drag, resize, link or arrow delete. */
   editable: boolean;
+  onDeleted?: () => void;
 }) {
   const t = useTranslations("gantt");
   const { taskLabel } = useTaskFormat();
@@ -226,7 +228,10 @@ export function TimelinePane({
             to: nameOf(pendingDelete.successorId),
           })}
           confirmLabel={t("menuDelete")}
-          onConfirm={() => deleteDependency.mutateAsync(pendingDelete.id)}
+          onConfirm={async () => {
+            await deleteDependency.mutateAsync(pendingDelete.id);
+            onDeleted?.();
+          }}
           onClose={() => setPendingDelete(null)}
         />
       )}
