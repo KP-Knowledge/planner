@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
     "build:migrate": "esbuild src/db/migrate.ts --bundle --platform=node --format=esm --target=node22 --external:pg-native --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/migrate.mjs",
     "db:seed-demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts"
@@ -29,6 +30,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "~1.65.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",

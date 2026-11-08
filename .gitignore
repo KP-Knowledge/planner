@@ -46,3 +46,8 @@ next-env.d.ts
 
 # migrate bundle
 /dist
+
+# playwright
+/e2e/.auth/
+/test-results/
+/playwright-report/
