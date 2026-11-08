@@ -30,6 +30,7 @@ import { useDependencyDrag } from "./useDependencyDrag";
 
 const ROW_LINES_ID = "gantt-row-lines";
 const DAY_LINES_ID = "gantt-day-lines";
+const ROW_LINES_TILE = 100;
 
 export function TimelinePane({
   data,
@@ -125,10 +126,10 @@ export function TimelinePane({
         <clipPath id={AVATAR_CLIP_ID} clipPathUnits="objectBoundingBox">
           <circle cx={0.5} cy={0.5} r={0.5} />
         </clipPath>
-        <pattern id={ROW_LINES_ID} width={width} height={ROW_HEIGHT} patternUnits="userSpaceOnUse">
+        <pattern id={ROW_LINES_ID} width={ROW_LINES_TILE} height={ROW_HEIGHT} patternUnits="userSpaceOnUse">
           <line
             x1={0}
-            x2={width}
+            x2={ROW_LINES_TILE}
             y1={ROW_HEIGHT - 0.5}
             y2={ROW_HEIGHT - 0.5}
             className="stroke-border"
@@ -136,8 +137,8 @@ export function TimelinePane({
           />
         </pattern>
         {zoom === "day" && (
-          <pattern id={DAY_LINES_ID} width={px} height={height || 1} patternUnits="userSpaceOnUse">
-            <line x1={0.5} x2={0.5} y1={0} y2={height || 1} className="stroke-border" strokeOpacity={0.5} />
+          <pattern id={DAY_LINES_ID} width={px} height={ROW_HEIGHT} patternUnits="userSpaceOnUse">
+            <line x1={0.5} x2={0.5} y1={0} y2={ROW_HEIGHT} className="stroke-border" strokeOpacity={0.5} />
           </pattern>
         )}
       </defs>
