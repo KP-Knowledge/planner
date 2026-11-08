@@ -17,6 +17,8 @@ export const GRID_WIDTH = 640;
 export const AVATAR_SIZE = 18;
 export const AVATAR_STEP = 14;
 export const MAX_AVATARS = 3;
+export const LINK_HANDLE_OFFSET = 6;
+export const LINK_HANDLE_RADIUS = 5;
 const ELBOW = 8;
 
 export function dateToX(d: ISODate, origin: ISODate, zoom: Zoom): number {

@@ -1,5 +1,6 @@
 import { BarTail } from "./BarTail";
 import { MILESTONE_SIZE, ROW_HEIGHT } from "./layout";
+import { LinkHandle } from "./LinkHandle";
 import { selectHandlers, type BarProps } from "./TaskBar";
 
 /** `x` / `width` come from taskGeometry, so the diamond is centered in that box. */
@@ -13,6 +14,7 @@ export function MilestoneDiamond({
   ariaLabel,
   onSelect,
   bind,
+  link,
 }: BarProps) {
   const cx = x + width / 2;
   const cy = row * ROW_HEIGHT + ROW_HEIGHT / 2;
@@ -61,6 +63,7 @@ export function MilestoneDiamond({
         />
       )}
       <BarTail x={x + width + 6} row={row} assignees={assignees} label={task.name} />
+      {link && <LinkHandle edge={x + width} row={row} handlers={link} />}
     </g>
   );
 }

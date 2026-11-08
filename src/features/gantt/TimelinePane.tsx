@@ -1,5 +1,7 @@
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useCreateDependency, useDeleteDependency } from "./api";
 import { diffDays, type ISODate } from "@/lib/dates";
 import type { HolidaySet } from "@/lib/workdays";
 import type { GanttData } from "@/server/projects";
@@ -24,6 +26,7 @@ import { TaskBar } from "./TaskBar";
 import { TimeScale } from "./TimeScale";
 import { TodayLine } from "./TodayLine";
 import { useBarDrag } from "./useBarDrag";
+import { useDependencyDrag } from "./useDependencyDrag";
 
 const ROW_LINES_ID = "gantt-row-lines";
 const DAY_LINES_ID = "gantt-day-lines";
@@ -85,6 +88,15 @@ export function TimelinePane({
     });
     return map;
   }, [rows, origin, zoom, preview]);
+
+  const createDependency = useCreateDependency(data.project.id);
+  const deleteDependency = useDeleteDependency(data.project.id);
+  const [pendingDelete, setPendingDelete] = useState<Dependency | null>(null);
+  const { drag: linkDrag, handlers: linkHandlers } = useDependencyDrag({
+    positions,
+    onCreate: (predecessorId, successorId) => createDependency.mutate({ predecessorId, successorId }),
+  });
+  const nameOf = (id: string) => data.tasks.find((x) => x.id === id)?.name ?? "";
 
   const todayInRange = today >= origin && today <= end;
   const todayX = dateToX(today, origin, zoom) + px / 2;
@@ -157,7 +169,14 @@ export function TimelinePane({
 
       {todayInRange && <TodayLine x={todayX} height={height} />}
 
-      <DependencyLayer dependencies={dependencies} positions={positions} />
+      <DependencyLayer
+        dependencies={dependencies}
+        positions={positions}
+        label={(d) =>
+          t("dependencyLabel", { from: nameOf(d.predecessorId), to: nameOf(d.successorId) })
+        }
+        onRequestDelete={setPendingDelete}
+      />
 
       {rows.map((row, i) => {
         if (row.kind !== "task") return null;
@@ -175,6 +194,7 @@ export function TimelinePane({
           ariaLabel: taskLabel(task, depth),
           onSelect,
           bind: bindings(task.id),
+          link: linkHandlers(task.id),
         };
         return task.isMilestone ? (
           <MilestoneDiamond key={task.id} {...props} />
@@ -182,7 +202,31 @@ export function TimelinePane({
           <TaskBar key={task.id} {...props} />
         );
       })}
+
+      {linkDrag && (
+        <line
+          x1={linkDrag.x1}
+          y1={linkDrag.y1}
+          x2={linkDrag.x2}
+          y2={linkDrag.y2}
+          strokeWidth={2}
+          strokeDasharray="4 3"
+          className="pointer-events-none stroke-primary"
+        />
+      )}
       </svg>
+      {pendingDelete && (
+        <ConfirmDialog
+          title={t("deleteDepTitle")}
+          body={t("deleteDepBody", {
+            from: nameOf(pendingDelete.predecessorId),
+            to: nameOf(pendingDelete.successorId),
+          })}
+          confirmLabel={t("menuDelete")}
+          onConfirm={() => deleteDependency.mutateAsync(pendingDelete.id)}
+          onClose={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   );
 }

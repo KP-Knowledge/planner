@@ -3,7 +3,8 @@ import type { Task } from "@/server/tasks";
 import type { AvatarUser } from "./avatar";
 import { BarTail } from "./BarTail";
 import { BAR_HEIGHT, ROW_HEIGHT, estimateTextWidth } from "./layout";
-import type { BarBindings } from "./useBarDrag";
+import { LinkHandle } from "./LinkHandle";
+import type { BarBindings, PointerHandlers } from "./useBarDrag";
 
 export const HANDLE_WIDTH = 6;
 const NO_SCROLL = { touchAction: "none" } as const;
@@ -19,6 +20,8 @@ export type BarProps = {
   onSelect?: (taskId: string) => void;
   /** Drag, resize and keyboard handlers. Without them the bar only supports select. */
   bind?: BarBindings;
+  /** Pointer handlers for the dependency handle at the right edge. */
+  link?: PointerHandlers;
 };
 
 export function selectHandlers(task: Task, onSelect?: (taskId: string) => void) {
@@ -34,7 +37,7 @@ export function selectHandlers(task: Task, onSelect?: (taskId: string) => void) 
   };
 }
 
-export function TaskBar({ task, row, x, width, color, assignees, ariaLabel, onSelect, bind }: BarProps) {
+export function TaskBar({ task, row, x, width, color, assignees, ariaLabel, onSelect, bind, link }: BarProps) {
   const y = row * ROW_HEIGHT + (ROW_HEIGHT - BAR_HEIGHT) / 2;
   const mid = row * ROW_HEIGHT + ROW_HEIGHT / 2;
   const inside = estimateTextWidth(task.name) + 16 <= width;
@@ -116,6 +119,7 @@ export function TaskBar({ task, row, x, width, color, assignees, ariaLabel, onSe
         </>
       )}
       <BarTail x={x + width + 6} row={row} assignees={assignees} label={inside ? undefined : task.name} />
+      {link && <LinkHandle edge={x + width} row={row} handlers={link} />}
     </g>
   );
 }
