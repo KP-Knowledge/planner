@@ -2,24 +2,27 @@ import { useFormatter } from "next-intl";
 import { useMemo } from "react";
 import { dayOfWeek, diffDays, type ISODate } from "@/lib/dates";
 import { utcDate } from "./format";
-import { HEADER_ROW_HEIGHT, PX_PER_DAY, headerSegments, weekStart, type Zoom } from "./layout";
+import { HEADER_ROW_HEIGHT, PX_PER_DAY, headerSegments, todayHighlight, weekStart, type Zoom } from "./layout";
 
 export function TimeScale({
   origin,
   end,
   zoom,
+  today,
   holidayNames,
   onDayClick,
 }: {
   origin: ISODate;
   end: ISODate;
   zoom: Zoom;
+  today?: ISODate;
   holidayNames?: ReadonlyMap<ISODate, string[]>;
   /** Day zoom only. The cells become buttons. */
   onDayClick?: (date: ISODate, anchor: HTMLElement) => void;
 }) {
   const format = useFormatter();
   const { top, bottom } = useMemo(() => headerSegments(origin, end, zoom), [origin, end, zoom]);
+  const highlight = today ? todayHighlight(today, origin, end, zoom) : null;
   const width = (diffDays(origin, end) + 1) * PX_PER_DAY[zoom];
 
   const topLabel = (d: ISODate) =>
@@ -82,6 +85,15 @@ export function TimeScale({
           );
         })}
       </div>
+      {highlight && (
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute z-10 ${
+            highlight.kind === "box" ? "border-x-2 border-t-2 border-primary bg-primary/8" : "bg-primary"
+          }`}
+          style={{ left: highlight.x, width: highlight.width, top: HEADER_ROW_HEIGHT, height: HEADER_ROW_HEIGHT }}
+        />
+      )}
     </div>
   );
 }

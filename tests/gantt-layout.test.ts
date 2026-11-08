@@ -16,6 +16,7 @@ import {
   splitAvatars,
   taskGeometry,
   timelineRange,
+  todayHighlight,
   visibleRows,
   weekStart,
   xToDate,
@@ -282,5 +283,21 @@ describe("childCounts", () => {
     expect(counts.get("b")).toBe(1);
     expect(counts.get("a1")).toBe(1);
     expect(counts.has("b1")).toBe(false);
+  });
+});
+
+describe("todayHighlight", () => {
+  const origin = "2026-11-01";
+  const end = "2026-12-31";
+  it("outlines the whole column in day and week zoom", () => {
+    expect(todayHighlight("2026-11-08", origin, end, "day")).toEqual({ kind: "box", x: 7 * 36, width: 36 });
+    expect(todayHighlight("2026-11-08", origin, end, "week")).toEqual({ kind: "box", x: 7 * 16, width: 16 });
+  });
+  it("draws a centered 2px line in month zoom", () => {
+    expect(todayHighlight("2026-11-08", origin, end, "month")).toEqual({ kind: "line", x: 7 * 4 + 1, width: 2 });
+  });
+  it("returns null outside the range", () => {
+    expect(todayHighlight("2026-10-31", origin, end, "day")).toBeNull();
+    expect(todayHighlight("2027-01-01", origin, end, "month")).toBeNull();
   });
 });

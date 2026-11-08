@@ -247,3 +247,21 @@ export function childCounts(data: Pick<GanttData, "tasks">): Map<string, number>
   }
   return counts;
 }
+
+export const TODAY_BORDER = 2;
+
+export type TodayHighlight = { kind: "box" | "line"; x: number; width: number };
+
+/** Day and week zoom outline today's column; month zoom is too narrow, so it draws a line. */
+export function todayHighlight(
+  today: ISODate,
+  origin: ISODate,
+  end: ISODate,
+  zoom: Zoom,
+): TodayHighlight | null {
+  if (today < origin || today > end) return null;
+  const px = PX_PER_DAY[zoom];
+  const x = dateToX(today, origin, zoom);
+  if (zoom === "month") return { kind: "line", x: x + px / 2 - TODAY_BORDER / 2, width: TODAY_BORDER };
+  return { kind: "box", x, width: px };
+}

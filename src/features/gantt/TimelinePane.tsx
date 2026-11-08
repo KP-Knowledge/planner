@@ -16,15 +16,16 @@ import {
   PX_PER_DAY,
   ROW_HEIGHT,
   dateToX,
+  TODAY_BORDER,
   nonWorkingDays,
   taskGeometry,
+  todayHighlight,
   type Row,
   type Zoom,
 } from "./layout";
 import { MilestoneDiamond } from "./MilestoneDiamond";
 import { TaskBar } from "./TaskBar";
 import { TimeScale } from "./TimeScale";
-import { TodayLine } from "./TodayLine";
 import { useBarDrag } from "./useBarDrag";
 import { useDependencyDrag } from "./useDependencyDrag";
 
@@ -108,13 +109,12 @@ export function TimelinePane({
   });
   const nameOf = (id: string) => data.tasks.find((x) => x.id === id)?.name ?? "";
 
-  const todayInRange = today >= origin && today <= end;
-  const todayX = dateToX(today, origin, zoom) + px / 2;
+  const highlight = todayHighlight(today, origin, end, zoom);
 
   return (
     <div className="shrink-0" style={{ width }}>
       <div className="sticky top-0 z-10">
-        <TimeScale origin={origin} end={end} zoom={zoom} holidayNames={holidayNames} onDayClick={onDayClick} />
+        <TimeScale origin={origin} end={end} zoom={zoom} today={today} holidayNames={holidayNames} onDayClick={onDayClick} />
       </div>
       <svg
         width={width}
@@ -189,7 +189,35 @@ export function TimelinePane({
 
       <rect width={width} height={height} fill={`url(#${ROW_LINES_ID})`} className="pointer-events-none" />
 
-      {todayInRange && <TodayLine x={todayX} height={height} />}
+      {highlight?.kind === "box" && (
+        <g className="pointer-events-none" aria-hidden>
+          <rect
+            x={highlight.x}
+            y={0}
+            width={highlight.width}
+            height={height}
+            fill="var(--color-primary)"
+            fillOpacity={0.08}
+          />
+          <path
+            d={`M${highlight.x + TODAY_BORDER / 2} 0V${height - TODAY_BORDER / 2}H${highlight.x + highlight.width - TODAY_BORDER / 2}V0`}
+            fill="none"
+            stroke="var(--color-primary)"
+            strokeWidth={TODAY_BORDER}
+          />
+        </g>
+      )}
+      {highlight?.kind === "line" && (
+        <rect
+          x={highlight.x}
+          y={0}
+          width={highlight.width}
+          height={height}
+          fill="var(--color-primary)"
+          className="pointer-events-none"
+          aria-hidden
+        />
+      )}
 
       <DependencyLayer
         dependencies={dependencies}
