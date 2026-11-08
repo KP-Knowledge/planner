@@ -32,10 +32,10 @@ export function TaskDetailPanel({ task, onClose, ...rest }: TaskDetailPanelProps
   const panelRef = useRef<HTMLElement>(null);
   const originRef = useRef<HTMLElement | null>(null);
   const taskIdRef = useRef(task.id);
-  taskIdRef.current = task.id;
 
   // Remember what opened the panel, then move focus inside. Runs again when another task is selected.
   useEffect(() => {
+    taskIdRef.current = task.id;
     const active = document.activeElement as HTMLElement | null;
     if (active && active !== document.body && !panelRef.current?.contains(active)) {
       originRef.current = active;
