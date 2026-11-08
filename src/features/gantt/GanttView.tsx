@@ -70,7 +70,8 @@ function GanttChart({ data }: { data: GanttData }) {
   const didInitialScroll = useRef(false);
 
   const { origin, end } = useMemo(() => timelineRange(data.tasks, today), [data.tasks, today]);
-  const rows = useMemo(() => visibleRows(data, collapsed), [data, collapsed]);
+  const editable = data.project.archivedAt === null;
+  const rows = useMemo(() => visibleRows(data, collapsed, { editable }), [data, collapsed, editable]);
   const holidayNames = useMemo(() => holidayNameMap(data.holidays), [data.holidays]);
   const holidaySet = useMemo(() => new Set(data.holidays.map((h) => h.date)), [data.holidays]);
   const usersById = useMemo(() => new Map(data.users.map((u) => [u.id, u])), [data.users]);
@@ -133,6 +134,9 @@ function GanttChart({ data }: { data: GanttData }) {
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto bg-card">
           <div className="flex" style={{ width: GRID_WIDTH + timelineWidth }}>
             <GridPane
+              projectId={data.project.id}
+              data={data}
+              editable={editable}
               rows={rows}
               collapsed={collapsed}
               counts={counts}

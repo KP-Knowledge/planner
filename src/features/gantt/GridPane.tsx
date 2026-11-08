@@ -1,27 +1,34 @@
 "use client";
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useTranslations } from "next-intl";
-import { memo } from "react";
-import { countWorkdays, type HolidaySet } from "@/lib/workdays";
-import { resolveAssignees, type AvatarUser } from "./avatar";
-import { HtmlAvatars } from "./Avatars";
-import { useTaskFormat } from "./format";
+import { memo, useId, useMemo, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import type { HolidaySet } from "@/lib/workdays";
+import type { GanttData } from "@/server/projects";
+import { useCreateSection, useCreateTask, useDeleteSection, useDeleteTask, useRenameSection, useReorder, useUpdateTask } from "./api";
+import type { AvatarUser } from "./avatar";
+import { InlineInput } from "./InlineInput";
 import { GRID_WIDTH, HEADER_HEIGHT, ROW_HEIGHT, type Row } from "./layout";
+import { buildOrder, addRowId } from "./reorder";
+import { AddTaskRow, CELL, GRID_COLUMNS, SectionRow, TaskRow } from "./GridRows";
+import type { RowMenuItem } from "./RowMenu";
 
-/** Column widths in px; must add up to GRID_WIDTH. */
-export const GRID_COLUMNS = {
-  name: 244,
-  assignees: 84,
-  start: 88,
-  end: 88,
-  duration: 56,
-  progress: 80,
-} as const;
-
-const INDENT = 20;
-const CELL = "flex shrink-0 items-center overflow-hidden px-2";
+export { GRID_COLUMNS };
 
 export type GridPaneProps = {
+  projectId: string;
+  /** Needed to build the order body after a drag. */
+  data: Pick<GanttData, "sections" | "tasks">;
   rows: readonly Row[];
   collapsed: ReadonlySet<string>;
   /** Number of children per collapsible row id (see childCounts). */
@@ -29,61 +36,117 @@ export type GridPaneProps = {
   usersById: ReadonlyMap<string, AvatarUser>;
   holidaySet: HolidaySet;
   selectedId?: string | null;
+  editable?: boolean;
   onToggle: (id: string) => void;
   onSelect?: (taskId: string) => void;
 };
 
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      width={14}
-      height={14}
-      viewBox="0 0 14 14"
-      aria-hidden
-      className={`transition-transform ${open ? "rotate-90" : ""}`}
-    >
-      <path d="M5 3l4 4-4 4" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-    </svg>
-  );
-}
+type PendingDelete =
+  | { kind: "task"; id: string; name: string }
+  | { kind: "section"; id: string; name: string; count: number };
 
-function ToggleButton({
-  id,
-  name,
-  open,
-  onToggle,
-}: {
-  id: string;
-  name: string;
-  open: boolean;
-  onToggle: (id: string) => void;
-}) {
+export function AddSectionRow({ projectId }: { projectId: string }) {
   const t = useTranslations("gantt");
+  const createSection = useCreateSection(projectId);
+  const [adding, setAdding] = useState(false);
   return (
-    <button
-      type="button"
-      aria-expanded={open}
-      aria-label={t(open ? "collapse" : "expand", { name })}
-      onClick={() => onToggle(id)}
-      className="mr-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted hover:bg-surface hover:text-text focus-visible:outline-2 focus-visible:outline-primary"
-    >
-      <Chevron open={open} />
-    </button>
+    <div className="flex items-center px-2" style={{ height: ROW_HEIGHT }}>
+      {adding ? (
+        <InlineInput
+          keepOpen
+          label={t("addSection")}
+          placeholder={t("newSectionPlaceholder")}
+          onSubmit={(name) => createSection.mutate(name)}
+          onClose={() => setAdding(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="rounded px-1 py-0.5 text-xs text-muted hover:bg-surface hover:text-text focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          + {t("addSection")}
+        </button>
+      )}
+    </div>
   );
 }
 
 function GridPaneImpl({
+  projectId,
+  data,
   rows,
   collapsed,
   counts,
   usersById,
   holidaySet,
   selectedId,
+  editable = false,
   onToggle,
   onSelect,
 }: GridPaneProps) {
   const t = useTranslations("gantt");
-  const { date: fmt, taskLabel } = useTaskFormat();
+  const dndId = useId();
+  const reorder = useReorder(projectId);
+  const updateTask = useUpdateTask(projectId);
+  const createTask = useCreateTask(projectId);
+  const deleteTask = useDeleteTask(projectId);
+  const renameSection = useRenameSection(projectId);
+  const deleteSection = useDeleteSection(projectId);
+
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [addingIn, setAddingIn] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const itemIds = useMemo(
+    () =>
+      rows.map((r) =>
+        r.kind === "section" ? r.section.id : r.kind === "task" ? r.task.id : addRowId(r.sectionId),
+      ),
+    [rows],
+  );
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over) return;
+    const order = buildOrder(data, String(active.id), String(over.id));
+    if (order) reorder.mutate(order);
+  };
+
+  const addSubtask = (parentId: string) => {
+    if (collapsed.has(parentId)) onToggle(parentId);
+    createTask.mutate(
+      { parentId, name: t("newSubtaskName") },
+      { onSuccess: (task) => setRenamingId(task.id) },
+    );
+  };
+
+  const taskMenu = (id: string, name: string, depth: 0 | 1): RowMenuItem[] => [
+    { key: "rename", label: t("menuRename"), onSelect: () => setRenamingId(id) },
+    ...(depth === 0
+      ? [{ key: "subtask", label: t("menuAddSubtask"), onSelect: () => addSubtask(id) }]
+      : []),
+    {
+      key: "delete",
+      label: t("menuDelete"),
+      danger: true,
+      onSelect: () => setPendingDelete({ kind: "task", id, name }),
+    },
+  ];
+
+  const sectionMenu = (id: string, name: string, count: number): RowMenuItem[] => [
+    { key: "rename", label: t("menuRename"), onSelect: () => setRenamingId(id) },
+    {
+      key: "delete",
+      label: t("deleteSectionTitle"),
+      danger: true,
+      onSelect: () => setPendingDelete({ kind: "section", id, name, count }),
+    },
+  ];
 
   const header = (label: string, width: number, align = "") => (
     <div
@@ -94,6 +157,9 @@ function GridPaneImpl({
       {label}
     </div>
   );
+
+  const stopRename = () => setRenamingId(null);
+  const renameTask = (id: string, name: string) => updateTask.mutate({ id, patch: { name } });
 
   return (
     <div
@@ -116,105 +182,87 @@ function GridPaneImpl({
         {header(t("colProgress"), GRID_COLUMNS.progress, "justify-end")}
       </div>
 
-      {rows.map((row) => {
-        if (row.kind === "section") {
-          const { section } = row;
-          const count = counts.get(section.id) ?? 0;
-          const open = !collapsed.has(section.id);
-          return (
-            <div
-              key={`s:${section.id}`}
-              role="row"
-              tabIndex={0}
-              aria-level={1}
-              aria-expanded={open}
-              aria-label={t("sectionLabel", { name: section.name, count })}
-              className="flex items-center border-b border-border bg-surface px-1 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-              style={{ height: ROW_HEIGHT }}
-            >
-              <ToggleButton id={section.id} name={section.name} open={open} onToggle={onToggle} />
-              <span role="gridcell" className="truncate text-sm font-semibold" title={section.name}>
-                {section.name}
-              </span>
-              <span role="gridcell" className="ml-3 shrink-0 text-xs text-muted">
-                {t("taskCount", { count })}
-              </span>
-            </div>
-          );
-        }
+      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          {rows.map((row) => {
+            if (row.kind === "section") {
+              const { section } = row;
+              const count = counts.get(section.id) ?? 0;
+              return (
+                <SectionRow
+                  key={`s:${section.id}`}
+                  section={section}
+                  count={count}
+                  open={!collapsed.has(section.id)}
+                  editable={editable}
+                  renaming={renamingId === section.id}
+                  menu={sectionMenu(section.id, section.name, count)}
+                  onToggle={onToggle}
+                  onStartRename={setRenamingId}
+                  onRename={(id, name) => renameSection.mutate({ id, name })}
+                  onStopRename={stopRename}
+                />
+              );
+            }
+            if (row.kind === "add") {
+              return (
+                <AddTaskRow
+                  key={`a:${row.sectionId}`}
+                  sectionId={row.sectionId}
+                  adding={addingIn === row.sectionId}
+                  onStart={setAddingIn}
+                  onCreate={(sectionId, name) => createTask.mutate({ sectionId, name })}
+                  onStop={() => setAddingIn(null)}
+                />
+              );
+            }
+            const { task, depth } = row;
+            const subtasks = depth === 0 ? (counts.get(task.id) ?? 0) : 0;
+            return (
+              <TaskRow
+                key={`t:${task.id}`}
+                task={task}
+                depth={depth}
+                subtasks={subtasks}
+                open={!collapsed.has(task.id)}
+                selected={selectedId === task.id}
+                editable={editable}
+                renaming={renamingId === task.id}
+                menu={taskMenu(task.id, task.name, depth)}
+                holidaySet={holidaySet}
+                usersById={usersById}
+                onToggle={onToggle}
+                onSelect={onSelect}
+                onStartRename={setRenamingId}
+                onRename={renameTask}
+                onStopRename={stopRename}
+              />
+            );
+          })}
+        </SortableContext>
+      </DndContext>
 
-        if (row.kind === "add") return null;
-        const { task, depth } = row;
-        const subtasks = depth === 0 ? (counts.get(task.id) ?? 0) : 0;
-        const open = !collapsed.has(task.id);
-        const selected = selectedId === task.id;
-        const activate = onSelect ? () => onSelect(task.id) : undefined;
-        const duration = task.isMilestone
-          ? "–"
-          : String(countWorkdays(task.startDate, task.endDate, holidaySet));
+      {editable && <AddSectionRow projectId={projectId} />}
 
-        return (
-          <div
-            key={`t:${task.id}`}
-            role="row"
-            tabIndex={0}
-            aria-level={depth + 2}
-            aria-selected={selected}
-            aria-expanded={subtasks > 0 ? open : undefined}
-            aria-label={taskLabel(task, depth)}
-            data-task-row={task.id}
-            onClick={activate}
-            onKeyDown={(e) => {
-              if (activate && e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                activate();
-              }
-            }}
-            className={`flex items-center border-b border-border text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${
-              selected ? "bg-primary/10" : "hover:bg-surface"
-            }`}
-            style={{ height: ROW_HEIGHT }}
-          >
-            <div
-              role="gridcell"
-              className={`${CELL} min-w-0`}
-              style={{ width: GRID_COLUMNS.name, paddingLeft: 8 + depth * INDENT }}
-            >
-              {subtasks > 0 ? (
-                <ToggleButton id={task.id} name={task.name} open={open} onToggle={onToggle} />
-              ) : (
-                <span aria-hidden className="mr-1 inline-block w-5 shrink-0" />
-              )}
-              <span className={`truncate ${depth > 0 ? "text-muted" : ""}`} title={task.name}>
-                {task.name}
-              </span>
-            </div>
-            <div role="gridcell" className={CELL} style={{ width: GRID_COLUMNS.assignees }}>
-              <HtmlAvatars users={resolveAssignees(task.assigneeIds, usersById)} />
-            </div>
-            <div role="gridcell" className={`${CELL} text-xs`} style={{ width: GRID_COLUMNS.start }}>
-              {fmt(task.startDate)}
-            </div>
-            <div role="gridcell" className={`${CELL} text-xs`} style={{ width: GRID_COLUMNS.end }}>
-              {task.isMilestone ? "–" : fmt(task.endDate)}
-            </div>
-            <div
-              role="gridcell"
-              className={`${CELL} justify-end text-xs tabular-nums`}
-              style={{ width: GRID_COLUMNS.duration }}
-            >
-              {duration}
-            </div>
-            <div
-              role="gridcell"
-              className={`${CELL} justify-end text-xs tabular-nums`}
-              style={{ width: GRID_COLUMNS.progress }}
-            >
-              {task.isMilestone ? "–" : `${task.progress}%`}
-            </div>
-          </div>
-        );
-      })}
+      {pendingDelete && (
+        <ConfirmDialog
+          title={t(pendingDelete.kind === "task" ? "deleteTaskTitle" : "deleteSectionTitle")}
+          body={
+            pendingDelete.kind === "task"
+              ? t("deleteTaskBody", { name: pendingDelete.name })
+              : pendingDelete.count > 0
+                ? t("deleteSectionBody", { name: pendingDelete.name, count: pendingDelete.count })
+                : t("deleteSectionBodyEmpty", { name: pendingDelete.name })
+          }
+          confirmLabel={t("menuDelete")}
+          onConfirm={() =>
+            pendingDelete.kind === "task"
+              ? deleteTask.mutateAsync(pendingDelete.id)
+              : deleteSection.mutateAsync(pendingDelete.id)
+          }
+          onClose={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   );
 }
