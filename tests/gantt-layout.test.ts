@@ -11,6 +11,7 @@ import {
   childCounts,
   dateToX,
   dependencyPath,
+  firstSundayX,
   headerSegments,
   nonWorkingDays,
   splitAvatars,
@@ -299,5 +300,19 @@ describe("todayHighlight", () => {
   it("returns null outside the range", () => {
     expect(todayHighlight("2026-10-31", origin, end, "day")).toBeNull();
     expect(todayHighlight("2027-01-01", origin, end, "month")).toBeNull();
+  });
+});
+
+describe("firstSundayX", () => {
+  const px = PX_PER_DAY.week;
+
+  it("is 0 when the origin is a Sunday", () => {
+    expect(firstSundayX("2026-11-08", px)).toBe(0);
+  });
+
+  it("counts days until the next Sunday", () => {
+    expect(firstSundayX("2026-11-04", px)).toBe(4 * px); // Wednesday
+    expect(firstSundayX("2026-11-07", px)).toBe(px); // Saturday
+    expect(firstSundayX("2026-11-09", px)).toBe(6 * px); // Monday
   });
 });

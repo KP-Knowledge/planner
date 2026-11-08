@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useCreateDependency, useDeleteDependency } from "./api";
-import { dayOfWeek, diffDays, type ISODate } from "@/lib/dates";
+import { diffDays, type ISODate } from "@/lib/dates";
 import type { HolidaySet } from "@/lib/workdays";
 import type { GanttData } from "@/server/projects";
 import { resolveTaskColor } from "@/lib/color";
@@ -16,6 +16,7 @@ import {
   PX_PER_DAY,
   ROW_HEIGHT,
   dateToX,
+  firstSundayX,
   TODAY_BORDER,
   nonWorkingDays,
   taskGeometry,
@@ -83,7 +84,7 @@ export function TimelinePane({
   });
   const width = (diffDays(origin, end) + 1) * px;
   const height = rows.length * ROW_HEIGHT;
-  const firstSundayX = ((7 - dayOfWeek(origin)) % 7) * px;
+  const sundayX = firstSundayX(origin, px);
 
   const shaded = useMemo(
     () => nonWorkingDays(origin, end, holidayNames),
@@ -146,7 +147,7 @@ export function TimelinePane({
         {zoom === "week" && (
           <pattern
             id={WEEK_LINES_ID}
-            x={firstSundayX}
+            x={sundayX}
             width={7 * px}
             height={ROW_HEIGHT}
             patternUnits="userSpaceOnUse"

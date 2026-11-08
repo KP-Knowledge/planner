@@ -176,6 +176,9 @@ function segments(
 /** The Sunday on or before `d`. */
 export const weekStart = (d: ISODate): ISODate => addDays(d, -dayOfWeek(d));
 
+/** X offset of the first Sunday boundary line at or after `origin` (0 when origin is a Sunday). */
+export const firstSundayX = (origin: ISODate, px: number): number => ((7 - dayOfWeek(origin)) % 7) * px;
+
 /**
  * Two header rows covering origin..end (inclusive).
  * day: month / day, week: month / week (Sunday start), month: year / month.
