@@ -4,7 +4,7 @@ import type { Holiday } from "@/server/projects";
 import { utcDate } from "../gantt/format";
 import { monthGrid } from "./monthLayout";
 
-const MONDAY = "2024-01-01";
+const SUNDAY = "2023-12-31";
 const BOTH_STYLE = { background: "linear-gradient(135deg, var(--color-primary) 50%, var(--color-accent) 50%)" };
 
 export function MonthGrid({
@@ -31,7 +31,7 @@ export function MonthGrid({
       <div className="grid grid-cols-7 gap-0.5 text-center text-xs text-muted" aria-hidden>
         {Array.from({ length: 7 }, (_, i) => (
           <span key={i}>
-            {format.dateTime(utcDate(addDays(MONDAY, i)), { weekday: "narrow", timeZone: "UTC" })}
+            {format.dateTime(utcDate(addDays(SUNDAY, i)), { weekday: "narrow", timeZone: "UTC" })}
           </span>
         ))}
       </div>
