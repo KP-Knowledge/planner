@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 export function Modal({
   title,
@@ -19,6 +19,8 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
+  // A backdrop click only counts when the press also started on the backdrop, so a text-selection drag that ends outside doesn't dismiss.
+  const pressedBackdrop = useRef(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -31,11 +33,26 @@ export function Modal({
     };
   }, []);
 
+  const onKeyDown = (e: KeyboardEvent<HTMLDialogElement>) => {
+    if (!onDismiss || e.key !== "Escape") return;
+    // Handle Esc ourselves: the native cancel event can be non-cancelable (Chrome close watcher, repeated Esc).
+    e.preventDefault();
+    onDismiss();
+  };
+
+  const onNativeClose = () => {
+    const dialog = ref.current;
+    if (!onDismiss || !dialog) return onClose();
+    // Closed behind the caller's back (cancel was not cancelable). Reopen so unsaved state is never dropped silently.
+    if (!dialog.open) dialog.showModal();
+    onDismiss();
+  };
+
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      onClose={onClose}
+      onClose={onNativeClose}
       onCancel={
         onDismiss
           ? (e) => {
@@ -44,8 +61,14 @@ export function Modal({
             }
           : undefined
       }
+      onKeyDown={onKeyDown}
+      onPointerDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget;
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) (onDismiss ?? onClose)();
+        const pressed = pressedBackdrop.current;
+        pressedBackdrop.current = false;
+        if (pressed && e.target === e.currentTarget) (onDismiss ?? onClose)();
       }}
       className={`m-auto w-[calc(100%-2rem)] ${size === "lg" ? "max-w-[560px]" : "max-w-md"} rounded-lg border border-border bg-card p-0 text-text shadow-xl backdrop:bg-black/40`}
     >
