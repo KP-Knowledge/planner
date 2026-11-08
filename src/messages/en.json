@@ -88,7 +88,6 @@
     "colProgress": "Progress",
     "collapse": "Collapse {name}",
     "expand": "Expand {name}",
-    "weekShort": "W{n}",
     "taskCount": "Tasks: {count}",
     "sectionLabel": "Section {name}, tasks: {count}",
     "taskLabel": "{name}, {start} to {end}, {progress}% complete",

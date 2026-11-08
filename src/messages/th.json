@@ -88,7 +88,6 @@
     "colProgress": "ความคืบหน้า",
     "collapse": "ย่อ {name}",
     "expand": "ขยาย {name}",
-    "weekShort": "สัปดาห์ {n}",
     "taskCount": "งาน: {count}",
     "sectionLabel": "Section {name} มีงาน {count} รายการ",
     "taskLabel": "{name} {start} ถึง {end} คืบหน้า {progress}%",

@@ -1,8 +1,8 @@
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter } from "next-intl";
 import { useMemo } from "react";
 import { dayOfWeek, diffDays, type ISODate } from "@/lib/dates";
 import { utcDate } from "./format";
-import { HEADER_ROW_HEIGHT, PX_PER_DAY, headerSegments, isoWeek, type Zoom } from "./layout";
+import { HEADER_ROW_HEIGHT, PX_PER_DAY, headerSegments, weekStart, type Zoom } from "./layout";
 
 export function TimeScale({
   origin,
@@ -19,7 +19,6 @@ export function TimeScale({
   onDayClick?: (date: ISODate, anchor: HTMLElement) => void;
 }) {
   const format = useFormatter();
-  const t = useTranslations("gantt");
   const { top, bottom } = useMemo(() => headerSegments(origin, end, zoom), [origin, end, zoom]);
   const width = (diffDays(origin, end) + 1) * PX_PER_DAY[zoom];
 
@@ -33,7 +32,7 @@ export function TimeScale({
         });
 
   const bottomLabel = (d: ISODate) => {
-    if (zoom === "week") return t("weekShort", { n: isoWeek(d) });
+    if (zoom === "week") return format.dateTime(utcDate(weekStart(d)), { month: "short", day: "numeric", timeZone: "UTC" });
     if (zoom === "month") return format.dateTime(utcDate(d), { month: "short", timeZone: "UTC" });
     return `${Number(d.slice(8))} ${format.dateTime(utcDate(d), { weekday: "narrow", timeZone: "UTC" })}`;
   };

@@ -142,13 +142,6 @@ export function timelineRange(
   return { origin: addDays(min, -14), end: addDays(max, 30) };
 }
 
-/** ISO 8601 week number (weeks start on Monday, week 1 contains the first Thursday). */
-export function isoWeek(d: ISODate): number {
-  const thursday = addDays(d, 3 - ((dayOfWeek(d) + 6) % 7));
-  const jan1 = `${thursday.slice(0, 4)}-01-01`;
-  return Math.floor(diffDays(jan1, thursday) / 7) + 1;
-}
-
 export type HeaderSegment = {
   /** First day shown in this segment (clipped to the range). */
   date: ISODate;
