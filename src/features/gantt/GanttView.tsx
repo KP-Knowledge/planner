@@ -20,6 +20,7 @@ import {
   xToDate,
   type Zoom,
 } from "./layout";
+import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TimelinePane } from "./TimelinePane";
 import { Toolbar } from "./Toolbar";
 
@@ -64,7 +65,12 @@ function GanttChart({ data }: { data: GanttData }) {
   const [zoom, setZoom] = useState<Zoom>("day");
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [today] = useState(() => todayInBangkok());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const updateTask = useUpdateTask(data.project.id);
+  const selectedTask = useMemo(
+    () => (selectedId ? (data.tasks.find((x) => x.id === selectedId) ?? null) : null),
+    [data.tasks, selectedId],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const centerDate = useRef<string | null>(null);
   const didInitialScroll = useRef(false);
@@ -131,34 +137,49 @@ function GanttChart({ data }: { data: GanttData }) {
       {data.sections.length === 0 ? (
         <p className="p-6 text-sm text-muted">{t("empty")}</p>
       ) : (
-        <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto bg-card">
-          <div className="flex" style={{ width: GRID_WIDTH + timelineWidth }}>
-            <GridPane
-              projectId={data.project.id}
-              data={data}
-              editable={editable}
-              rows={rows}
-              collapsed={collapsed}
-              counts={counts}
-              usersById={usersById}
-              holidaySet={holidaySet}
-              onToggle={toggle}
-            />
-            <TimelinePane
-              data={data}
-              holidaySet={holidaySet}
-              onCommitDates={(id, dates) => updateTask.mutateAsync({ id, patch: dates })}
-              rows={rows}
-              origin={origin}
-              end={end}
-              zoom={zoom}
-              today={today}
-              holidayNames={holidayNames}
-              dependencies={data.dependencies}
-              teamsById={teamsById}
-              usersById={usersById}
-            />
+        <div className="flex min-h-0 flex-1">
+          <div ref={scrollRef} className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-card">
+            <div className="flex" style={{ width: GRID_WIDTH + timelineWidth }}>
+              <GridPane
+                projectId={data.project.id}
+                data={data}
+                editable={editable}
+                rows={rows}
+                collapsed={collapsed}
+                counts={counts}
+                usersById={usersById}
+                holidaySet={holidaySet}
+                selectedId={selectedTask?.id}
+                onToggle={toggle}
+                onSelect={setSelectedId}
+              />
+              <TimelinePane
+                data={data}
+                holidaySet={holidaySet}
+                onCommitDates={(id, dates) => updateTask.mutateAsync({ id, patch: dates })}
+                rows={rows}
+                origin={origin}
+                end={end}
+                zoom={zoom}
+                today={today}
+                holidayNames={holidayNames}
+                dependencies={data.dependencies}
+                teamsById={teamsById}
+                usersById={usersById}
+                onSelect={setSelectedId}
+              />
+            </div>
           </div>
+          {selectedTask && (
+            <TaskDetailPanel
+              projectId={data.project.id}
+              task={selectedTask}
+              teams={data.teams}
+              users={data.users}
+              editable={editable}
+              onClose={() => setSelectedId(null)}
+            />
+          )}
         </div>
       )}
     </div>
