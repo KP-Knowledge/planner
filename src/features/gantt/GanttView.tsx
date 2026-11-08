@@ -8,7 +8,7 @@ import { HttpError } from "@/lib/api-client";
 import { diffDays, todayInBangkok } from "@/lib/dates";
 import type { GanttData } from "@/server/projects";
 import { useGantt, useUpdateTask } from "./api";
-import { GridPane } from "./GridPane";
+import { AddSectionRow, GridPane } from "./GridPane";
 import {
   GRID_WIDTH,
   PX_PER_DAY,
@@ -135,7 +135,10 @@ function GanttChart({ data }: { data: GanttData }) {
         onToday={() => scrollToDate(today, zoom, true)}
       />
       {data.sections.length === 0 ? (
-        <p className="p-6 text-sm text-muted">{t("empty")}</p>
+        <div className="p-6">
+          <p className="text-sm text-muted">{t("empty")}</p>
+          {editable && <AddSectionRow projectId={data.project.id} />}
+        </div>
       ) : (
         <div className="flex min-h-0 flex-1">
           <div ref={scrollRef} className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-card">
