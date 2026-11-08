@@ -45,6 +45,7 @@ export function TimelinePane({
   teamsById,
   usersById,
   onSelect,
+  editable,
 }: {
   data: GanttData;
   holidaySet: HolidaySet;
@@ -59,6 +60,8 @@ export function TimelinePane({
   teamsById: ReadonlyMap<string, Team>;
   usersById: ReadonlyMap<string, AvatarUser>;
   onSelect?: (taskId: string) => void;
+  /** False for archived projects: no drag, resize, link or arrow delete. */
+  editable: boolean;
 }) {
   const t = useTranslations("gantt");
   const { taskLabel } = useTaskFormat();
@@ -175,7 +178,7 @@ export function TimelinePane({
         label={(d) =>
           t("dependencyLabel", { from: nameOf(d.predecessorId), to: nameOf(d.successorId) })
         }
-        onRequestDelete={setPendingDelete}
+        onRequestDelete={editable ? setPendingDelete : undefined}
       />
 
       {rows.map((row, i) => {
@@ -193,8 +196,8 @@ export function TimelinePane({
           assignees: resolveAssignees(task.assigneeIds, usersById),
           ariaLabel: taskLabel(task, depth),
           onSelect,
-          bind: bindings(task.id),
-          link: linkHandlers(task.id),
+          bind: editable ? bindings(task.id) : undefined,
+          link: editable ? linkHandlers(task.id) : undefined,
         };
         return task.isMilestone ? (
           <MilestoneDiamond key={task.id} {...props} />
@@ -215,7 +218,7 @@ export function TimelinePane({
         />
       )}
       </svg>
-      {pendingDelete && (
+      {editable && pendingDelete && (
         <ConfirmDialog
           title={t("deleteDepTitle")}
           body={t("deleteDepBody", {

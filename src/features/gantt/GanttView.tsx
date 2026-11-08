@@ -167,6 +167,7 @@ function GanttChart({ data }: { data: GanttData }) {
                 teamsById={teamsById}
                 usersById={usersById}
                 onSelect={setSelectedId}
+                editable={editable}
               />
             </div>
           </div>
