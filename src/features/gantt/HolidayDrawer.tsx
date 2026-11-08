@@ -120,6 +120,12 @@ export function HolidayDrawer({
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
           {!editable && <p className="text-sm text-muted">{t("readOnly")}</p>}
+          <p role="status" className="text-sm text-muted empty:hidden">
+            {importHolidays.isSuccess && importHolidays.variables === year
+              ? t("imported", { count: importHolidays.data.inserted })
+              : null}
+            {importHolidays.isError ? t("importFailed") : null}
+          </p>
           {year >= NO_BUDDHIST_FROM && (
             <p role="note" className="rounded-md border border-warning bg-surface px-3 py-2 text-sm">
               {t("banner")}

@@ -174,6 +174,11 @@ export function HolidayDayEditor({
                 </label>
               ))}
             </fieldset>
+            {create.isError && (
+              <p role="alert" className="text-sm text-danger">
+                {t("saveFailed")}
+              </p>
+            )}
             <button type="submit" disabled={create.isPending || name.trim() === ""} className={btnPrimary}>
               {t("add")}
             </button>
