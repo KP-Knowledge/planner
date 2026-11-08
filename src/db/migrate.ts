@@ -16,10 +16,14 @@ async function main(): Promise<void> {
     await migrate(db, { migrationsFolder });
     console.log(`migrations applied from ${migrationsFolder}`);
 
-    const year = Number(todayInBangkok().slice(0, 4));
-    const counts = await ensureSeeded(db, [year, year + 1]);
-    for (const [y, n] of Object.entries(counts)) {
-      console.log(`holidays ${y}: ${n} seeded`);
+    try {
+      const year = Number(todayInBangkok().slice(0, 4));
+      const counts = await ensureSeeded(db, [year, year + 1]);
+      for (const [y, n] of Object.entries(counts)) {
+        console.log(`holidays ${y}: ${n} seeded`);
+      }
+    } catch (err) {
+      console.warn("holiday seeding failed; continuing without it", err);
     }
   } finally {
     await pool.end();
