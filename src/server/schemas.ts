@@ -6,10 +6,16 @@ function isRealDate(s: string): boolean {
 }
 
 export const uuid = z.uuid();
+export const MIN_YEAR = 2000;
+export const MAX_YEAR = 2100;
 export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine(isRealDate, "invalid date");
+  .refine(isRealDate, "invalid date")
+  .refine((s) => {
+    const y = Number(s.slice(0, 4));
+    return y >= MIN_YEAR && y <= MAX_YEAR;
+  }, `year must be ${MIN_YEAR}..${MAX_YEAR}`);
 export const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 export const name = z.string().trim().min(1).max(200);
 const description = z.string().max(10_000);
@@ -66,7 +72,7 @@ export const teamPatch = z.object({
   color: hexColor.optional(),
 });
 
-const holidayYear = z.number().int().min(2000).max(2100);
+const holidayYear = z.number().int().min(MIN_YEAR).max(MAX_YEAR);
 export const holidayListQuery = z.object({
   year: z.coerce.number().pipe(holidayYear),
   projectId: uuid.optional(),
