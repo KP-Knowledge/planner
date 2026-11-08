@@ -33,7 +33,7 @@
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), var(--font-noto-sans-thai), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
