@@ -47,6 +47,7 @@ export function TimelinePane({
   onSelect,
   editable,
   onDeleted,
+  onDayClick,
 }: {
   data: GanttData;
   holidaySet: HolidaySet;
@@ -64,6 +65,7 @@ export function TimelinePane({
   /** False for archived projects: no drag, resize, link or arrow delete. */
   editable: boolean;
   onDeleted?: () => void;
+  onDayClick?: (date: ISODate, anchor: HTMLElement) => void;
 }) {
   const t = useTranslations("gantt");
   const { taskLabel } = useTaskFormat();
@@ -109,7 +111,7 @@ export function TimelinePane({
   return (
     <div className="shrink-0" style={{ width }}>
       <div className="sticky top-0 z-10">
-        <TimeScale origin={origin} end={end} zoom={zoom} />
+        <TimeScale origin={origin} end={end} zoom={zoom} holidayNames={holidayNames} onDayClick={onDayClick} />
       </div>
       <svg
         width={width}

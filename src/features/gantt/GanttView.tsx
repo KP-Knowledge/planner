@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { btnSecondary } from "@/components/buttons";
 import { HttpError } from "@/lib/api-client";
-import { diffDays, todayInBangkok } from "@/lib/dates";
+import { diffDays, todayInBangkok, type ISODate } from "@/lib/dates";
 import type { GanttData } from "@/server/projects";
 import { useGantt, useUpdateTask } from "./api";
 import { AddSectionRow, GridPane } from "./GridPane";
+import { HolidayDrawer } from "./HolidayDrawer";
+import { HolidayPopover } from "./HolidayPopover";
 import {
   GRID_WIDTH,
   PX_PER_DAY,
@@ -66,6 +68,8 @@ function GanttChart({ data }: { data: GanttData }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [today] = useState(() => todayInBangkok());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dayPopover, setDayPopover] = useState<{ date: ISODate; anchor: HTMLElement } | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const updateTask = useUpdateTask(data.project.id);
   const selectedTask = useMemo(
     () => (selectedId ? (data.tasks.find((x) => x.id === selectedId) ?? null) : null),
@@ -136,6 +140,10 @@ function GanttChart({ data }: { data: GanttData }) {
         zoom={zoom}
         onZoom={changeZoom}
         onToday={() => scrollToDate(today, zoom, true)}
+        onHolidays={() => {
+          setDayPopover(null);
+          setDrawerOpen(true);
+        }}
       />
       {data.sections.length === 0 ? (
         <div className="p-6">
@@ -180,6 +188,9 @@ function GanttChart({ data }: { data: GanttData }) {
                 onSelect={setSelectedId}
                 editable={editable}
                 onDeleted={focusChart}
+                onDayClick={(date, anchor) =>
+                  setDayPopover((cur) => (cur?.date === date ? null : { date, anchor }))
+                }
               />
             </div>
           </div>
@@ -195,6 +206,25 @@ function GanttChart({ data }: { data: GanttData }) {
             />
           )}
         </div>
+      )}
+      {dayPopover && (
+        <HolidayPopover
+          key={dayPopover.date}
+          anchor={dayPopover.anchor}
+          date={dayPopover.date}
+          holidays={data.holidays.filter((h) => h.date === dayPopover.date)}
+          projectId={data.project.id}
+          editable={editable}
+          onClose={() => setDayPopover(null)}
+        />
+      )}
+      {drawerOpen && (
+        <HolidayDrawer
+          projectId={data.project.id}
+          initialYear={Number(today.slice(0, 4))}
+          editable={editable}
+          onClose={() => setDrawerOpen(false)}
+        />
       )}
     </div>
   );

@@ -11,12 +11,14 @@ export function Toolbar({
   zoom,
   onZoom,
   onToday,
+  onHolidays,
 }: {
   name: string;
   archived: boolean;
   zoom: Zoom;
   onZoom: (zoom: Zoom) => void;
   onToday: () => void;
+  onHolidays?: () => void;
 }) {
   const t = useTranslations("gantt");
   return (
@@ -38,6 +40,11 @@ export function Toolbar({
       <button type="button" onClick={onToday} className={btnSecondary}>
         {t("today")}
       </button>
+      {onHolidays && (
+        <button type="button" onClick={onHolidays} className={btnSecondary}>
+          {t("holidays")}
+        </button>
+      )}
       <div role="group" aria-label={t("zoom")} className="inline-flex overflow-hidden rounded-md border border-border">
         {ZOOMS.map((z) => (
           <button
